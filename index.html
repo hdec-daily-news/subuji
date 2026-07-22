@@ -223,29 +223,53 @@ function renderFlag(){
       ${rows}</table></div>`;
 }
 
+// 상승률 표시: +50% / -12% 형태, 상승 빨강 · 하락 파랑
+function pct(v){
+  if(v==null)return `<span class="muted">-</span>`;
+  const s=(v>0?"+":"")+v.toFixed(0)+"%";
+  return `<b style="color:${v>0?"#dc2626":v<0?"#2563eb":"var(--mut)"}">${s}</b>`;
+}
 function renderSearch(){
   const gus=[...new Set(D.complexes.map(c=>c.gu))].sort();
+  const bm=(D.meta.base_months||[]).map(m=>m.slice(0,4)+"."+m.slice(4)).join(", ");
   el("s-search").innerHTML=`<div class="card"><h2>단지 검색</h2>
     <label>단지명 검색</label><input id="q" placeholder="예: 은마, 래미안, 자이">
     <div class="row"><div><label>구</label><select id="fgu">
       <option value="">전체</option>${gus.map(g=>`<option>${g}</option>`).join("")}</select></div>
       <div><label>급지</label><select id="fg"><option value="">전체</option>
       ${D.grades.map(g=>`<option value="${g.g}">${g.label}</option>`).join("")}</select></div></div>
+    <div class="row"><div><label>정렬</label><select id="fs">
+      <option value="p84">84환산가 높은순</option>
+      <option value="c2">상승률(2년) 높은순</option>
+      <option value="c2a">상승률(2년) 낮은순</option></select></div>
+      <div><label>거래 최소건수</label><select id="fn">
+      <option value="0">전체</option><option value="3">양쪽 3건 이상</option>
+      <option value="5">양쪽 5건 이상</option></select></div></div>
+    <div class="muted" style="margin-top:8px">상승률(2년) = <b>${bm||"2년 전 3개월"}</b> 실거래 평단가 기준
+      전용 84 환산가 대비 현재 상승률</div>
     </div><div class="card scroll" id="sres"></div>`;
   const run=()=>{
-    const q=el("q").value.trim(), gu=el("fgu").value, g=el("fg").value;
+    const q=el("q").value.trim(), gu=el("fgu").value, g=el("fg").value,
+          srt=el("fs").value, minn=+el("fn").value;
     let r=D.complexes;
     if(q)r=r.filter(c=>c.nm.includes(q));
     if(gu)r=r.filter(c=>c.gu===gu);
     if(g)r=r.filter(c=>c.g===+g);
-    r=r.sort((a,b)=>b.p84-a.p84).slice(0,200);
+    if(minn)r=r.filter(c=>c.n>=minn&&c.n2>=minn);
+    if(srt==="c2")r=r.filter(c=>c.c2!=null).sort((a,b)=>b.c2-a.c2);
+    else if(srt==="c2a")r=r.filter(c=>c.c2!=null).sort((a,b)=>a.c2-b.c2);
+    else r=r.slice().sort((a,b)=>b.p84-a.p84);
+    r=r.slice(0,200);
     el("sres").innerHTML=`<div class="muted" style="margin-bottom:6px">${r.length}개 표시 (최대 200)</div>
-      <table><tr><th>구</th><th>동</th><th>단지</th><th>급지</th><th>84환산</th><th>세대</th><th>준공</th><th>거래</th></tr>
+      <table><tr><th>구</th><th>동</th><th>단지</th><th>급지</th><th>84환산</th>
+      <th>상승률(2년)</th><th>2년전</th><th>세대</th><th>준공</th><th>거래</th></tr>
       ${r.map(c=>`<tr><td>${esc(c.gu)}</td><td>${esc(c.dong)}</td><td><b>${esc(c.nm)}</b></td>
       <td><span class="tag" style="background:${gcolor(c.g)}">${glabel(c.g)}</span></td>
-      <td>${eok(c.p84)}</td><td>${c.hh??"-"}</td><td>${c.by??"-"}</td><td>${c.n}</td></tr>`).join("")}</table>`;
+      <td>${eok(c.p84)}</td><td>${pct(c.c2)}</td>
+      <td class="muted">${c.p2?eok(c.p2):"-"}</td>
+      <td>${c.hh??"-"}</td><td>${c.by??"-"}</td><td>${c.n}</td></tr>`).join("")}</table>`;
   };
-  ["q","fgu","fg"].forEach(id=>el(id).oninput=run);
+  ["q","fgu","fg","fs","fn"].forEach(id=>el(id).oninput=run);
   run();
 }
 
