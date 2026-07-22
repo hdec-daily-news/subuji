@@ -99,6 +99,17 @@ function nav(){
 const gcolor=g=>(D.grades.find(x=>x.g===g)||{}).color||"#888";
 const glabel=g=>(D.grades.find(x=>x.g===g)||{}).label||"-";
 
+// 서울이 화면 너비를 꽉 채우는 줌을 계산한다.
+// 서울 동서 폭 약 34km. 위도 37.55에서 1픽셀당 미터 = 156543*cos(lat)/2^zoom.
+const SEOUL={lat:37.5560,lon:126.9910};
+function seoulZoom(node){
+  const w=(node&&node.clientWidth)||window.innerWidth||375;
+  const z=Math.log2(156543*Math.cos(SEOUL.lat*Math.PI/180)*w/34000);
+  return Math.max(9.6,Math.min(12.2,z));
+}
+// 스크롤(휠)·핀치 확대 허용
+const MAPCFG={displayModeBar:false,responsive:true,scrollZoom:true};
+
 function renderGrade(){
   const cards=D.grades.map(g=>`<div class="gcard" style="border-left-color:${g.color}">
     <div class="lb" style="color:${g.color}">${g.label}</div>
@@ -129,7 +140,8 @@ function renderGrade(){
 }
 
 function drawMap(){
-  if(el("mapdiv").dataset.done)return;
+  const m=el("mapdiv");
+  if(!m||m.dataset.done)return;
   const tr=D.grades.map(g=>{
     const pts=D.complexes.filter(c=>c.g===g.g&&c.lat);
     return {type:"scattermapbox",mode:"markers",name:g.label,
@@ -138,9 +150,9 @@ function drawMap(){
       hoverinfo:"text",marker:{size:7,color:g.color,opacity:.75}};
   });
   Plotly.newPlot("mapdiv",tr,{
-    mapbox:{style:"open-street-map",center:{lat:37.551,lon:126.988},zoom:9.6},
+    mapbox:{style:"open-street-map",center:SEOUL,zoom:seoulZoom(m)},
     margin:{l:0,r:0,t:0,b:0},legend:{orientation:"h",y:1.02,font:{size:10}},
-    paper_bgcolor:"rgba(0,0,0,0)"},{displayModeBar:false,responsive:true});
+    paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
   el("mapdiv").dataset.done=1;
 }
 function renderMap(){
@@ -161,9 +173,9 @@ function drawRedevMap(){
     text:ps.map(p=>`${p.pj}<br>${p.st}<br>${p.b||""}<br>기사 ${p.n}건`),
     hoverinfo:"text",
     marker:{size:ps.map(p=>Math.min(9+p.n*1.4,30)),color:pal[st]||"#666",opacity:.8}}));
-  Plotly.newPlot("rmap",tr,{mapbox:{style:"open-street-map",center:{lat:37.551,lon:126.988},zoom:9.6},
+  Plotly.newPlot("rmap",tr,{mapbox:{style:"open-street-map",center:SEOUL,zoom:seoulZoom(d)},
     margin:{l:0,r:0,t:0,b:0},legend:{orientation:"h",y:1.02,font:{size:10}},
-    paper_bgcolor:"rgba(0,0,0,0)"},{displayModeBar:false,responsive:true});
+    paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
   d.dataset.done=1;
 }
 function renderRedev(){
