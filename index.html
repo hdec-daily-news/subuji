@@ -46,6 +46,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 th{color:var(--mut);font-weight:600;font-size:12px}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* 좁은 화면에서는 표가 화면폭을 넘어가 핵심 열(상승률 등)이 안 보였다.
+   보조 열을 숨겨서 스크롤 없이 핵심만 보이게 한다. */
+@media (max-width:640px){
+  .hide-sm{display:none}
+  th,td{padding:7px 4px;font-size:12.5px}
+  td.nm{max-width:104px;overflow:hidden;text-overflow:ellipsis}
+}
 .tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;color:#fff}
 input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
   background:var(--card);color:var(--tx);font-size:14px}
@@ -130,12 +137,15 @@ function renderGrade(){
     <div class="avg">평균 ${eok(g.avg)}</div></div>`).join("");
   const lists=D.grades.map(g=>{
     const rows=D.complexes.filter(c=>c.g===g.g).sort((a,b)=>b.p84-a.p84).slice(0,50)
-      .map(c=>`<tr><td>${esc(c.gu)}</td><td>${esc(c.dong)}</td><td><b>${esc(c.nm)}</b></td>
-        <td>${eok(c.p84)}</td><td>${c.hh??"-"}</td><td>${c.by??"-"}</td></tr>`).join("");
+      .map(c=>`<tr><td>${esc(c.gu)}</td><td class="hide-sm">${esc(c.dong)}</td>
+        <td class="nm"><b>${esc(c.nm)}</b></td>
+        <td>${eok(c.p84)}</td><td class="hide-sm">${c.hh??"-"}</td>
+        <td class="hide-sm">${c.by??"-"}</td></tr>`).join("");
     return `<details><summary style="padding:10px 0;font-weight:700;color:${g.color};cursor:pointer">
       ${g.label} · ${g.band} — ${g.count.toLocaleString()}개</summary>
       <div class="muted" style="margin-bottom:6px">${esc(g.desc)}</div>
-      <div class="scroll"><table><tr><th>구</th><th>동</th><th>단지</th><th>84환산</th><th>세대</th><th>준공</th></tr>
+      <div class="scroll"><table><tr><th>구</th><th class="hide-sm">동</th><th>단지</th>
+      <th>84환산</th><th class="hide-sm">세대</th><th class="hide-sm">준공</th></tr>
       ${rows}</table></div><div class="muted">상위 50개만 표시</div></details>`;
   }).join("");
   el("s-grade").innerHTML=`<div class="card"><h2>급지 현황</h2>
@@ -192,8 +202,10 @@ function drawRedevMap(){
 }
 function renderRedev(){
   const cnt=s=>D.news.filter(n=>n.st===s).length;
-  const prows=D.projects.slice(0,120).map(p=>`<tr><td><b>${esc(p.st)}</b></td><td>${esc(p.pj)}</td>
-    <td>${esc(p.gu)}</td><td>${esc(p.b)}</td><td>${p.n}</td><td>${esc(p.d)}</td></tr>`).join("");
+  const prows=D.projects.slice(0,120).map(p=>`<tr><td><b>${esc(p.st)}</b></td>
+    <td class="nm">${esc(p.pj)}</td>
+    <td>${esc(p.gu)}</td><td>${esc(p.b)}</td><td class="hide-sm">${p.n}</td>
+    <td class="hide-sm">${esc(p.d)}</td></tr>`).join("");
   const nitems=D.news.slice(0,40).map(n=>`<div class="item">
     <div class="t"><a href="${esc(n.l)}" target="_blank" rel="noopener">${esc(n.t)}</a></div>
     <div class="m">[${esc(n.st)}] ${esc(n.d)} ${n.gu?"· 📍"+esc(n.gu)+" "+esc(n.dong):""} ${n.b?"· 🏢"+esc(n.b):""}</div>
@@ -206,20 +218,24 @@ function renderRedev(){
     <div class="card"><div id="rmap" style="height:56vh;min-height:340px"></div>
       <div class="muted" style="margin-top:6px">※ 위치는 기사에서 인식한 <b>동 중심좌표</b>(구역 실제 경계 아님)</div></div>
     <div class="card"><h3>사업지 현황판</h3><div class="scroll"><table>
-      <tr><th>단계</th><th>사업지</th><th>구</th><th>건설사</th><th>기사</th><th>최근</th></tr>${prows}</table></div></div>
+      <tr><th>단계</th><th>사업지</th><th>구</th><th>건설사</th>
+      <th class="hide-sm">기사</th><th class="hide-sm">최근</th></tr>${prows}</table></div></div>
     <div class="card"><h3>최신 기사</h3>${nitems}</div>
     <div class="card"><h3>📝 블로그 인사이트</h3>${bitems}</div>`;
 }
 
 function renderFlag(){
-  const rows=D.flagships.map((f,i)=>`<tr><td>${i+1}</td><td>${esc(f.gu)}</td><td>${esc(f.dong)}</td>
-    <td><b>${esc(f.nm)}</b></td>
+  const rows=D.flagships.map((f,i)=>`<tr><td>${i+1}</td><td>${esc(f.gu)}</td>
+    <td class="hide-sm">${esc(f.dong)}</td>
+    <td class="nm"><b>${esc(f.nm)}</b></td>
     <td><span class="tag" style="background:${gcolor(f.g)}">${glabel(f.g)}</span></td>
-    <td>${eok(f.p84)}</td><td>${f.hh??"-"}</td><td>${f.by??"-"}</td></tr>`).join("");
+    <td>${eok(f.p84)}</td><td class="hide-sm">${f.hh??"-"}</td>
+    <td class="hide-sm">${f.by??"-"}</td></tr>`).join("");
   el("s-flag").innerHTML=`<div class="card"><h2>👑 구별 대장단지</h2>
     <div class="muted">구별로 전용 84 환산가가 가장 높은 단지 (최근 거래 3건 이상)</div></div>
     <div class="card scroll"><table>
-      <tr><th>#</th><th>구</th><th>동</th><th>대장단지</th><th>급지</th><th>84환산</th><th>세대</th><th>준공</th></tr>
+      <tr><th>#</th><th>구</th><th class="hide-sm">동</th><th>대장단지</th><th>급지</th>
+      <th>84환산</th><th class="hide-sm">세대</th><th class="hide-sm">준공</th></tr>
       ${rows}</table></div>`;
 }
 
@@ -261,13 +277,16 @@ function renderSearch(){
     else r=r.slice().sort((a,b)=>b.p84-a.p84);
     r=r.slice(0,200);
     el("sres").innerHTML=`<div class="muted" style="margin-bottom:6px">${r.length}개 표시 (최대 200)</div>
-      <table><tr><th>구</th><th>동</th><th>단지</th><th>급지</th><th>84환산</th>
-      <th>상승률(2년)</th><th>2년전</th><th>세대</th><th>준공</th><th>거래</th></tr>
-      ${r.map(c=>`<tr><td>${esc(c.gu)}</td><td>${esc(c.dong)}</td><td><b>${esc(c.nm)}</b></td>
+      <table><tr><th>구</th><th class="hide-sm">동</th><th>단지</th><th>급지</th><th>84환산</th>
+      <th>상승률<span class="hide-sm">(2년)</span></th><th class="hide-sm">2년전</th>
+      <th class="hide-sm">세대</th><th class="hide-sm">준공</th><th class="hide-sm">거래</th></tr>
+      ${r.map(c=>`<tr><td>${esc(c.gu)}</td><td class="hide-sm">${esc(c.dong)}</td>
+      <td class="nm"><b>${esc(c.nm)}</b></td>
       <td><span class="tag" style="background:${gcolor(c.g)}">${glabel(c.g)}</span></td>
       <td>${eok(c.p84)}</td><td>${pct(c.c2)}</td>
-      <td class="muted">${c.p2?eok(c.p2):"-"}</td>
-      <td>${c.hh??"-"}</td><td>${c.by??"-"}</td><td>${c.n}</td></tr>`).join("")}</table>`;
+      <td class="muted hide-sm">${c.p2?eok(c.p2):"-"}</td>
+      <td class="hide-sm">${c.hh??"-"}</td><td class="hide-sm">${c.by??"-"}</td>
+      <td class="hide-sm">${c.n}</td></tr>`).join("")}</table>`;
   };
   ["q","fgu","fg","fs","fn"].forEach(id=>el(id).oninput=run);
   run();
