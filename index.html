@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>서울 부동산 리서치</title>
+<meta name="description" content="국토부 실거래가 기반 서울 아파트 급지·시세·정비사업 리서치">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --tx:#1b1d21; --mut:#6b7280; --line:#e5e7eb;
+  --accent:#1f6feb;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1115;--card:#171a21;--tx:#e8eaed;--mut:#9aa1ab;--line:#272b33;--accent:#4c8dff}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+header{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);
+  padding:12px 16px calc(env(safe-area-inset-top)*0 + 12px)}
+h1{margin:0;font-size:17px;font-weight:700}
+.sub{color:var(--mut);font-size:12px;margin-top:2px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:var(--card);
+  border-bottom:1px solid var(--line);position:sticky;top:60px;z-index:19;-webkit-overflow-scrolling:touch}
+nav button{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--mut);
+  padding:7px 13px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
+nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+main{padding:14px 12px 60px;max-width:1100px;margin:0 auto}
+section{display:none} section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.gcard{border-left:5px solid;border-radius:10px;background:var(--card);padding:10px 12px;
+  border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.gcard .lb{font-weight:700;font-size:14px}
+.gcard .bd{font-size:11px;color:var(--mut)}
+.gcard .num{font-size:22px;font-weight:800;margin-top:4px}
+.gcard .avg{font-size:11px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--mut);font-weight:600;font-size:12px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;color:#fff}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+  background:var(--card);color:var(--tx);font-size:14px}
+label{font-size:12px;color:var(--mut);display:block;margin:8px 0 4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.muted{color:var(--mut);font-size:12px}
+h2{font-size:16px;margin:0 0 4px} h3{font-size:15px;margin:16px 0 6px}
+h4{font-size:14px;margin:12px 0 4px}
+a{color:var(--accent);text-decoration:none}
+.item{padding:9px 0;border-bottom:1px solid var(--line)}
+.item .t{font-size:14px;font-weight:600}
+.item .m{font-size:11px;color:var(--mut);margin-top:3px}
+.chart{width:100%;height:380px}
+.ok{color:#16a34a;font-weight:700} .no{color:#dc2626;font-weight:700}
+.big{font-size:20px;font-weight:800}
+blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏙️ 서울 부동산 리서치</h1>
+  <div class="sub" id="meta">불러오는 중…</div>
+</header>
+<nav id="nav"></nav>
+<main>
+  <section id="s-grade" class="on"></section>
+  <section id="s-map"></section>
+  <section id="s-flag"></section>
+  <section id="s-search"></section>
+  <section id="s-redev"></section>
+  <section id="s-report"></section>
+  <section id="s-calc"></section>
+</main>
+
+<script>
+const TABS=[["s-grade","🏆 급지"],["s-map","🗺️ 지도"],["s-flag","👑 대장단지"],
+            ["s-search","🔎 단지검색"],["s-redev","🏗️ 정비사업"],
+            ["s-report","📰 리포트"],["s-calc","💰 자금"]];
+let D=null;
+const eok=v=>v==null?"-":(v/10000).toFixed(1)+"억";
+const el=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+function nav(){
+  el("nav").innerHTML=TABS.map(([id,t],i)=>
+    `<button data-t="${id}" class="${i?'':'on'}">${t}</button>`).join("");
+  el("nav").onclick=e=>{
+    const b=e.target.closest("button"); if(!b)return;
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    document.querySelectorAll("main section").forEach(s=>s.classList.remove("on"));
+    el(b.dataset.t).classList.add("on");
+    if(b.dataset.t==="s-map")drawMap();
+    if(b.dataset.t==="s-redev")drawRedevMap();
+  };
+}
+const gcolor=g=>(D.grades.find(x=>x.g===g)||{}).color||"#888";
+const glabel=g=>(D.grades.find(x=>x.g===g)||{}).label||"-";
+
+function renderGrade(){
+  const cards=D.grades.map(g=>`<div class="gcard" style="border-left-color:${g.color}">
+    <div class="lb" style="color:${g.color}">${g.label}</div>
+    <div class="bd">${g.band}</div>
+    <div class="num">${g.count.toLocaleString()}</div>
+    <div class="avg">평균 ${eok(g.avg)}</div></div>`).join("");
+  const lists=D.grades.map(g=>{
+    const rows=D.complexes.filter(c=>c.g===g.g).sort((a,b)=>b.p84-a.p84).slice(0,50)
+      .map(c=>`<tr><td>${esc(c.gu)}</td><td>${esc(c.dong)}</td><td><b>${esc(c.nm)}</b></td>
+        <td>${eok(c.p84)}</td><td>${c.hh??"-"}</td><td>${c.by??"-"}</td></tr>`).join("");
+    return `<details><summary style="padding:10px 0;font-weight:700;color:${g.color};cursor:pointer">
+      ${g.label} · ${g.band} — ${g.count.toLocaleString()}개</summary>
+      <div class="muted" style="margin-bottom:6px">${esc(g.desc)}</div>
+      <div class="scroll"><table><tr><th>구</th><th>동</th><th>단지</th><th>84환산</th><th>세대</th><th>준공</th></tr>
+      ${rows}</table></div><div class="muted">상위 50개만 표시</div></details>`;
+  }).join("");
+  el("s-grade").innerHTML=`<div class="card"><h2>급지 현황</h2>
+    <div class="muted">최근 6개월 매매 실거래의 평단가 중앙값을 전용 84(25.41평)로 환산해 자동 산출</div></div>
+    <div class="grid">${cards}</div>
+    <div class="card" style="margin-top:12px"><div id="gchart" class="chart"></div></div>
+    <div class="card">${lists}</div>`;
+  const tr=D.grades.map(g=>({
+    type:"box", x:D.complexes.filter(c=>c.g===g.g).map(c=>c.p84/10000),
+    name:g.label, marker:{color:g.color}, orientation:"h", boxpoints:false}));
+  Plotly.newPlot("gchart",tr,{margin:{l:70,r:10,t:10,b:36},showlegend:false,
+    xaxis:{title:"전용 84 환산가(억)"},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",
+    font:{color:getComputedStyle(document.body).color}},{displayModeBar:false,responsive:true});
+}
+
+function drawMap(){
+  if(el("mapdiv").dataset.done)return;
+  const tr=D.grades.map(g=>{
+    const pts=D.complexes.filter(c=>c.g===g.g&&c.lat);
+    return {type:"scattermapbox",mode:"markers",name:g.label,
+      lat:pts.map(p=>p.lat),lon:pts.map(p=>p.lon),
+      text:pts.map(p=>`${p.nm}<br>${p.gu} ${p.dong}<br>${eok(p.p84)}`),
+      hoverinfo:"text",marker:{size:7,color:g.color,opacity:.75}};
+  });
+  Plotly.newPlot("mapdiv",tr,{
+    mapbox:{style:"open-street-map",center:{lat:37.551,lon:126.988},zoom:9.6},
+    margin:{l:0,r:0,t:0,b:0},legend:{orientation:"h",y:1.02,font:{size:10}},
+    paper_bgcolor:"rgba(0,0,0,0)"},{displayModeBar:false,responsive:true});
+  el("mapdiv").dataset.done=1;
+}
+function renderMap(){
+  el("s-map").innerHTML=`<div class="card"><h2>지도</h2>
+    <div class="muted">급지 색상으로 표시 · 좌표 확보 ${D.complexes.filter(c=>c.lat).length.toLocaleString()}개 단지</div></div>
+    <div class="card"><div id="mapdiv" style="height:70vh;min-height:420px"></div></div>`;
+}
+
+function drawRedevMap(){
+  const d=el("rmap"); if(!d||d.dataset.done)return;
+  const byStage={};
+  D.projects.filter(p=>p.lat).forEach(p=>{(byStage[p.st]=byStage[p.st]||[]).push(p)});
+  const pal={"시공사 선정":"#dc2626","입찰":"#ea580c","현장설명회":"#ca8a04",
+             "조합/총회":"#16a34a","인허가/계획":"#2563eb","착공/분양":"#7c3aed"};
+  const tr=Object.entries(byStage).map(([st,ps])=>({
+    type:"scattermapbox",mode:"markers",name:st,
+    lat:ps.map(p=>p.lat),lon:ps.map(p=>p.lon),
+    text:ps.map(p=>`${p.pj}<br>${p.st}<br>${p.b||""}<br>기사 ${p.n}건`),
+    hoverinfo:"text",
+    marker:{size:ps.map(p=>Math.min(9+p.n*1.4,30)),color:pal[st]||"#666",opacity:.8}}));
+  Plotly.newPlot("rmap",tr,{mapbox:{style:"open-street-map",center:{lat:37.551,lon:126.988},zoom:9.6},
+    margin:{l:0,r:0,t:0,b:0},legend:{orientation:"h",y:1.02,font:{size:10}},
+    paper_bgcolor:"rgba(0,0,0,0)"},{displayModeBar:false,responsive:true});
+  d.dataset.done=1;
+}
+function renderRedev(){
+  const cnt=s=>D.news.filter(n=>n.st===s).length;
+  const prows=D.projects.slice(0,120).map(p=>`<tr><td><b>${esc(p.st)}</b></td><td>${esc(p.pj)}</td>
+    <td>${esc(p.gu)}</td><td>${esc(p.b)}</td><td>${p.n}</td><td>${esc(p.d)}</td></tr>`).join("");
+  const nitems=D.news.slice(0,40).map(n=>`<div class="item">
+    <div class="t"><a href="${esc(n.l)}" target="_blank" rel="noopener">${esc(n.t)}</a></div>
+    <div class="m">[${esc(n.st)}] ${esc(n.d)} ${n.gu?"· 📍"+esc(n.gu)+" "+esc(n.dong):""} ${n.b?"· 🏢"+esc(n.b):""}</div>
+    </div>`).join("");
+  const bitems=D.blogs.slice(0,40).map(n=>`<div class="item">
+    <div class="t"><a href="${esc(n.l)}" target="_blank" rel="noopener">${esc(n.t)}</a></div>
+    <div class="m">${esc(n.d)} · ${esc(n.s)} ${n.gu?"· 📍"+esc(n.gu):""}</div></div>`).join("");
+  el("s-redev").innerHTML=`<div class="card"><h2>재개발·재건축 정비사업</h2>
+    <div class="muted">기사 기반 자동 수집 · 시공사 선정 ${cnt("시공사 선정")} · 입찰 ${cnt("입찰")} · 현장설명회 ${cnt("현장설명회")}</div></div>
+    <div class="card"><div id="rmap" style="height:56vh;min-height:340px"></div>
+      <div class="muted" style="margin-top:6px">※ 위치는 기사에서 인식한 <b>동 중심좌표</b>(구역 실제 경계 아님)</div></div>
+    <div class="card"><h3>사업지 현황판</h3><div class="scroll"><table>
+      <tr><th>단계</th><th>사업지</th><th>구</th><th>건설사</th><th>기사</th><th>최근</th></tr>${prows}</table></div></div>
+    <div class="card"><h3>최신 기사</h3>${nitems}</div>
+    <div class="card"><h3>📝 블로그 인사이트</h3>${bitems}</div>`;
+}
+
+function renderFlag(){
+  const rows=D.flagships.map((f,i)=>`<tr><td>${i+1}</td><td>${esc(f.gu)}</td><td>${esc(f.dong)}</td>
+    <td><b>${esc(f.nm)}</b></td>
+    <td><span class="tag" style="background:${gcolor(f.g)}">${glabel(f.g)}</span></td>
+    <td>${eok(f.p84)}</td><td>${f.hh??"-"}</td><td>${f.by??"-"}</td></tr>`).join("");
+  el("s-flag").innerHTML=`<div class="card"><h2>👑 구별 대장단지</h2>
+    <div class="muted">구별로 전용 84 환산가가 가장 높은 단지 (최근 거래 3건 이상)</div></div>
+    <div class="card scroll"><table>
+      <tr><th>#</th><th>구</th><th>동</th><th>대장단지</th><th>급지</th><th>84환산</th><th>세대</th><th>준공</th></tr>
+      ${rows}</table></div>`;
+}
+
+function renderSearch(){
+  const gus=[...new Set(D.complexes.map(c=>c.gu))].sort();
+  el("s-search").innerHTML=`<div class="card"><h2>단지 검색</h2>
+    <label>단지명 검색</label><input id="q" placeholder="예: 은마, 래미안, 자이">
+    <div class="row"><div><label>구</label><select id="fgu">
+      <option value="">전체</option>${gus.map(g=>`<option>${g}</option>`).join("")}</select></div>
+      <div><label>급지</label><select id="fg"><option value="">전체</option>
+      ${D.grades.map(g=>`<option value="${g.g}">${g.label}</option>`).join("")}</select></div></div>
+    </div><div class="card scroll" id="sres"></div>`;
+  const run=()=>{
+    const q=el("q").value.trim(), gu=el("fgu").value, g=el("fg").value;
+    let r=D.complexes;
+    if(q)r=r.filter(c=>c.nm.includes(q));
+    if(gu)r=r.filter(c=>c.gu===gu);
+    if(g)r=r.filter(c=>c.g===+g);
+    r=r.sort((a,b)=>b.p84-a.p84).slice(0,200);
+    el("sres").innerHTML=`<div class="muted" style="margin-bottom:6px">${r.length}개 표시 (최대 200)</div>
+      <table><tr><th>구</th><th>동</th><th>단지</th><th>급지</th><th>84환산</th><th>세대</th><th>준공</th><th>거래</th></tr>
+      ${r.map(c=>`<tr><td>${esc(c.gu)}</td><td>${esc(c.dong)}</td><td><b>${esc(c.nm)}</b></td>
+      <td><span class="tag" style="background:${gcolor(c.g)}">${glabel(c.g)}</span></td>
+      <td>${eok(c.p84)}</td><td>${c.hh??"-"}</td><td>${c.by??"-"}</td><td>${c.n}</td></tr>`).join("")}</table>`;
+  };
+  ["q","fgu","fg"].forEach(id=>el(id).oninput=run);
+  run();
+}
+
+function renderReport(){
+  el("s-report").innerHTML=`<div class="card"><h2>📰 일일 변동 리포트</h2>
+    <div class="muted">매일 아침 자동 생성 · 새 거래 / 급지 변동 / 84환산가 변동</div></div>
+    <div class="card scroll">${D.report}</div>`;
+}
+
+function renderCalc(){
+  const REG=["강남구","서초구","송파구","용산구"];
+  el("s-calc").innerHTML=`<div class="card"><h2>💰 자금 시뮬레이터</h2>
+    <div class="muted">LTV·DSR 기준 대출한도와 진입 가능 여부 (개략 추정)</div>
+    <div class="row"><div><label>보유 현금(만원)</label><input id="cash" type="number" value="50000" step="1000"></div>
+    <div><label>연소득(만원)</label><input id="inc" type="number" value="8000" step="500"></div></div>
+    <div class="row"><div><label>매매가(만원)</label><input id="price" type="number" value="150000" step="1000"></div>
+    <div><label>지역</label><select id="reg"><option>비규제지역 (LTV 70%)</option><option>규제지역 (LTV 50%)</option></select></div></div>
+    <div class="row"><div><label>금리(%)</label><input id="rate" type="number" value="4.5" step="0.1"></div>
+    <div><label>기간(년)</label><input id="yrs" type="number" value="30" step="5"></div></div>
+    <div class="row"><div><label>시나리오</label><select id="mode"><option>실거주 매수</option><option>갭투자(전세 레버리지)</option></select></div>
+    <div><label>전세가(만원, 갭투자시)</label><input id="jeonse" type="number" value="75000" step="1000"></div></div>
+    </div><div class="card" id="cres"></div>`;
+  const run=()=>{
+    const cash=+el("cash").value, inc=+el("inc").value, price=+el("price").value,
+      ltv=el("reg").value.includes("규제지역 (LTV 50")?0.5:0.7,
+      rate=+el("rate").value/100, yrs=+el("yrs").value, mode=el("mode").value;
+    const tax=price<=60000?price*0.011:price<=90000?price*0.022:price*0.033;
+    let need,loan=0,dsrL=0,ltvL=0;
+    if(mode==="실거주 매수"){
+      const mr=rate/12,n=yrs*12,f=mr===0?1/n:mr/(1-Math.pow(1+mr,-n));
+      dsrL=inc*0.40/(f*12); ltvL=price*ltv; loan=Math.min(dsrL,ltvL);
+      need=price+tax-loan;
+    }else{ need=price-(+el("jeonse").value)+tax; }
+    const short=need-cash, ok=short<=0;
+    el("cres").innerHTML=`
+      ${mode==="실거주 매수"?`<div>대출 가능 <span class="big">${eok(loan)}</span>
+        <div class="muted">DSR한도 ${eok(dsrL)} / LTV한도 ${eok(ltvL)} 중 작은 값</div></div><hr style="border:0;border-top:1px solid var(--line);margin:10px 0">`:""}
+      <div class="row"><div>취득세(개략)<div class="big">${eok(tax)}</div></div>
+      <div>필요 현금<div class="big">${eok(need)}</div></div></div>
+      <div style="margin-top:12px" class="${ok?'ok':'no'}">
+        ${ok?`✅ 진입 가능 — 여유 ${eok(-short)}`:`❌ 진입 어려움 — ${eok(short)} 부족`}</div>
+      <div class="muted" style="margin-top:8px">대출한도 = min(DSR 40%, LTV). 취득세는 1주택 개략 추정.
+        실제 심사(스트레스DSR·중과세)와 다를 수 있습니다.</div>`;
+  };
+  ["cash","inc","price","reg","rate","yrs","mode","jeonse"].forEach(id=>el(id).oninput=run);
+  run();
+}
+
+fetch("data.json").then(r=>r.json()).then(d=>{
+  D=d;
+  el("meta").textContent=`국토부 실거래가 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · `
+    +`${d.meta.period} · 갱신 ${d.meta.generated}`;
+  nav(); renderGrade(); renderMap(); renderFlag(); renderSearch();
+  renderRedev(); renderReport(); renderCalc();
+}).catch(e=>{el("meta").textContent="데이터 로드 실패: "+e});
+</script>
+</body>
+</html>
