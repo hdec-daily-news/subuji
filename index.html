@@ -17,12 +17,18 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);
   font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
-header{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);
-  padding:12px 16px calc(env(safe-area-inset-top)*0 + 12px)}
+/* 헤더+탭을 하나의 sticky 블록으로 묶는다.
+   예전엔 nav 를 top:60px 로 고정했는데, 헤더 높이가 화면폭에 따라 달라져
+   탭바가 어긋나거나 본문과 겹쳤다. */
+.topbar{position:sticky;top:0;z-index:30;background:var(--card);
+  border-bottom:1px solid var(--line)}
+header{padding:10px 16px 8px}
 h1{margin:0;font-size:17px;font-weight:700}
-.sub{color:var(--mut);font-size:12px;margin-top:2px}
-nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:var(--card);
-  border-bottom:1px solid var(--line);position:sticky;top:60px;z-index:19;-webkit-overflow-scrolling:touch}
+/* 좁은 화면에서 3줄로 줄바꿈되어 sticky 상단바가 화면을 잡아먹던 문제 방지 */
+.sub{color:var(--mut);font-size:11.5px;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 10px;background:var(--card);
+  -webkit-overflow-scrolling:touch}
 nav button{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--mut);
   padding:7px 13px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
 nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -59,11 +65,13 @@ blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color
 </style>
 </head>
 <body>
-<header>
-  <h1>🏙️ 서울 부동산 리서치</h1>
-  <div class="sub" id="meta">불러오는 중…</div>
-</header>
-<nav id="nav"></nav>
+<div class="topbar">
+  <header>
+    <h1>🏙️ 서울 부동산 리서치</h1>
+    <div class="sub" id="meta">불러오는 중…</div>
+  </header>
+  <nav id="nav"></nav>
+</div>
 <main>
   <section id="s-grade" class="on"></section>
   <section id="s-map"></section>
@@ -109,6 +117,10 @@ function seoulZoom(node){
 }
 // 스크롤(휠)·핀치 확대 허용
 const MAPCFG={displayModeBar:false,responsive:true,scrollZoom:true};
+// 범례를 지도 위에 겹치지 않게: 상단에 여백을 확보하고 그 안에 범례를 넣는다.
+const MAPMARGIN={l:0,r:0,t:38,b:0};
+const MAPLEGEND={orientation:"h",y:1,yanchor:"bottom",x:0,xanchor:"left",
+                 font:{size:10},bgcolor:"rgba(0,0,0,0)"};
 
 function renderGrade(){
   const cards=D.grades.map(g=>`<div class="gcard" style="border-left-color:${g.color}">
@@ -151,7 +163,7 @@ function drawMap(){
   });
   Plotly.newPlot("mapdiv",tr,{
     mapbox:{style:"open-street-map",center:SEOUL,zoom:seoulZoom(m)},
-    margin:{l:0,r:0,t:0,b:0},legend:{orientation:"h",y:1.02,font:{size:10}},
+    margin:MAPMARGIN,legend:MAPLEGEND,
     paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
   el("mapdiv").dataset.done=1;
 }
@@ -174,7 +186,7 @@ function drawRedevMap(){
     hoverinfo:"text",
     marker:{size:ps.map(p=>Math.min(9+p.n*1.4,30)),color:pal[st]||"#666",opacity:.8}}));
   Plotly.newPlot("rmap",tr,{mapbox:{style:"open-street-map",center:SEOUL,zoom:seoulZoom(d)},
-    margin:{l:0,r:0,t:0,b:0},legend:{orientation:"h",y:1.02,font:{size:10}},
+    margin:MAPMARGIN,legend:MAPLEGEND,
     paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
   d.dataset.done=1;
 }
@@ -296,8 +308,10 @@ function renderCalc(){
 
 fetch("data.json").then(r=>r.json()).then(d=>{
   D=d;
-  el("meta").textContent=`국토부 실거래가 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · `
-    +`${d.meta.period} · 갱신 ${d.meta.generated}`;
+  const mt=el("meta");
+  mt.textContent=`실거래 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · 갱신 ${d.meta.generated}`;
+  mt.title=`국토부 실거래가 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · `
+    +`수집기간 ${d.meta.period} · 갱신 ${d.meta.generated}`;
   nav(); renderGrade(); renderMap(); renderFlag(); renderSearch();
   renderRedev(); renderReport(); renderCalc();
 }).catch(e=>{el("meta").textContent="데이터 로드 실패: "+e});
