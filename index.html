@@ -54,6 +54,13 @@ th{color:var(--mut);font-weight:600;font-size:12px}
   td.nm{max-width:104px;overflow:hidden;text-overflow:ellipsis}
 }
 .tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;color:#fff}
+/* 지도 범례(칩) — 이전엔 12px 라 눈에 안 들어왔다. 키우고 줄바꿈 정리 */
+.maptip{margin-top:10px;font-size:14px;line-height:1.6}
+.maptip .muted{font-size:12.5px}
+.lgwrap{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
+.lgchip{display:inline-flex;align-items:center;gap:7px;font-size:15px;line-height:1.4}
+.lgchip .dot{border-radius:50%;display:inline-block;flex:0 0 auto}
+.lgchip .muted{font-size:13px}
 input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
   background:var(--card);color:var(--tx);font-size:14px}
 label{font-size:12px;color:var(--mut);display:block;margin:8px 0 4px}
@@ -125,9 +132,11 @@ function seoulZoom(node){
 // 스크롤(휠)·핀치 확대 허용
 const MAPCFG={displayModeBar:false,responsive:true,scrollZoom:true};
 // 범례를 지도 위에 겹치지 않게: 상단에 여백을 확보하고 그 안에 범례를 넣는다.
-const MAPMARGIN={l:0,r:0,t:38,b:0};
+// 글씨를 키운 만큼 여백(t)도 같이 늘려야 지도와 겹치지 않는다.
+const MAPMARGIN={l:0,r:0,t:48,b:0};
 const MAPLEGEND={orientation:"h",y:1,yanchor:"bottom",x:0,xanchor:"left",
-                 font:{size:10},bgcolor:"rgba(0,0,0,0)"};
+                 font:{size:14},bgcolor:"rgba(0,0,0,0)",
+                 itemsizing:"constant"};
 
 function renderGrade(){
   const cards=D.grades.map(g=>`<div class="gcard" style="border-left-color:${g.color}">
@@ -225,22 +234,21 @@ function renderMap(){
   const withXY=D.complexes.filter(c=>c.lat).length;
   const chips=D.grades.map(g=>{
     const n=D.complexes.filter(c=>c.g===g.g&&c.lat).length;
-    return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px">
-      <span style="width:${Math.round(MSIZE[g.g])}px;height:${Math.round(MSIZE[g.g])}px;
-        border-radius:50%;background:${g.color};opacity:${MOPAC[g.g]};display:inline-block"></span>
+    return `<span class="lgchip">
+      <span class="dot" style="width:${Math.round(MSIZE[g.g])}px;height:${Math.round(MSIZE[g.g])}px;
+        background:${g.color};opacity:${MOPAC[g.g]}"></span>
       <b style="color:${g.color}">${g.label}</b>
       <span class="muted">${g.band} · ${n.toLocaleString()}</span></span>`;
   }).join("");
   el("s-map").innerHTML=`<div class="card">
     <h2>급지 지도</h2>
     <div class="muted">단지 ${withXY.toLocaleString()}개 · 상급지일수록 <b>크고 진하게</b> 표시</div>
-    <div style="margin-top:10px;line-height:2">${chips}</div>
+    <div class="maptip">💡 급지를 클릭하여 지도상에 켜고 끌 수 있습니다.<br>
+      <span class="muted">(ex. 최상급지만 켜면 한강변·강남 벨트 / 중급지만 켜면 외곽 분포가 한눈에 들어옵니다)</span>
     </div>
-    <div class="card" style="padding:8px"><div id="mapdiv" style="height:72vh;min-height:440px"></div></div>
-    <div class="card"><div class="muted">
-      💡 <b>범례를 클릭하면 그 급지만 켜고 끌 수 있습니다.</b>
-      최상급지만 켜면 한강변·강남 벨트가, 중급지만 켜면 외곽 분포가 한눈에 들어옵니다.
-      휠·핀치로 확대하면 개별 단지까지 볼 수 있습니다.</div></div>`;
+    <div class="lgwrap">${chips}</div>
+    </div>
+    <div class="card" style="padding:8px"><div id="mapdiv" style="height:72vh;min-height:440px"></div></div>`;
 }
 
 function drawRedevMap(){
