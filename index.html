@@ -58,7 +58,12 @@ th{color:var(--mut);font-weight:600;font-size:12px}
 .maptip{margin-top:10px;font-size:14px;line-height:1.6}
 .maptip .muted{font-size:12.5px}
 .lgwrap{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
-.lgchip{display:inline-flex;align-items:center;gap:7px;font-size:15px;line-height:1.4}
+.lgchip{display:inline-flex;align-items:center;gap:7px;font-size:15px;line-height:1.4;
+  cursor:pointer;user-select:none;padding:4px 8px;border-radius:8px;
+  border:1px solid transparent;transition:opacity .15s,border-color .15s}
+.lgchip:hover{border-color:var(--line)}
+.lgchip.off{opacity:.35}
+.lgchip.off b{text-decoration:line-through}
 .lgchip .dot{border-radius:50%;display:inline-block;flex:0 0 auto}
 .lgchip .muted{font-size:13px}
 input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
@@ -197,6 +202,7 @@ function renderGrade(){
 // 지도 위에서 '상급지 벨트'가 먼저 눈에 들어오도록 한다.
 const MSIZE={1:13,2:10.5,3:8.5,4:7,5:6,6:5};
 const MOPAC={1:.95,2:.88,3:.78,4:.62,5:.5,6:.38};
+let MAPTRACE={};   // 급지 -> trace 인덱스
 
 function drawMap(force){
   const m=el("mapdiv");
@@ -207,6 +213,8 @@ function drawMap(force){
   // 급지 순(1→6)으로 그리면 최상급지가 하급지 점들에 덮여 벨트가 안 보인다.
   // 그래서 하급지부터 그리고 최상급지를 맨 위에 올린다.
   const order=D.grades.slice().sort((a,b)=>b.g-a.g);
+  MAPTRACE={};                       // 급지 -> trace 인덱스 (칩 토글에 사용)
+  order.forEach((g,i)=>{MAPTRACE[g.g]=i;});
   const tr=order.map(g=>{
     const pts=D.complexes.filter(c=>c.g===g.g&&c.lat);
     return {type:"scattermapbox",mode:"markers",name:g.label,
@@ -225,7 +233,8 @@ function drawMap(force){
     // carto-positron: 밝고 단순한 배경. open-street-map 은 도로·상호가 빽빽해
     // 데이터 점과 뒤섞여 지도가 복잡해 보였다.
     mapbox:{style:"carto-positron",center:SEOUL,zoom:seoulZoom(m)},
-    margin:MAPMARGIN,legend:MAPLEGEND,
+    // 지도 안 범례는 숨긴다. 위쪽 칩이 범례 역할을 하고 클릭 토글도 담당한다.
+    margin:{l:0,r:0,t:0,b:0},showlegend:false,
     paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
   m.dataset.done=1;
 }
@@ -234,7 +243,7 @@ function renderMap(){
   const withXY=D.complexes.filter(c=>c.lat).length;
   const chips=D.grades.map(g=>{
     const n=D.complexes.filter(c=>c.g===g.g&&c.lat).length;
-    return `<span class="lgchip">
+    return `<span class="lgchip" data-g="${g.g}" role="button" tabindex="0">
       <span class="dot" style="width:${Math.round(MSIZE[g.g])}px;height:${Math.round(MSIZE[g.g])}px;
         background:${g.color};opacity:${MOPAC[g.g]}"></span>
       <b style="color:${g.color}">${g.label}</b>
@@ -246,9 +255,26 @@ function renderMap(){
     <div class="maptip">💡 급지를 클릭하여 지도상에 켜고 끌 수 있습니다.<br>
       <span class="muted">(ex. 최상급지만 켜면 한강변·강남 벨트 / 중급지만 켜면 외곽 분포가 한눈에 들어옵니다)</span>
     </div>
-    <div class="lgwrap">${chips}</div>
+    <div class="lgwrap" id="lgwrap">${chips}</div>
     </div>
     <div class="card" style="padding:8px"><div id="mapdiv" style="height:72vh;min-height:440px"></div></div>`;
+
+  // 칩 = 범례. 클릭하면 해당 급지를 지도에서 켜고 끈다.
+  // (지도 안 Plotly 범례는 숨겼다 — 중복이고 지도 공간을 차지했다)
+  const toggle=chip=>{
+    const g=+chip.dataset.g;
+    const idx=MAPTRACE[g];
+    if(idx==null)return;
+    const off=chip.classList.toggle("off");
+    Plotly.restyle("mapdiv",{visible: off?"legendonly":true},[idx]);
+  };
+  el("lgwrap").addEventListener("click",e=>{
+    const c=e.target.closest(".lgchip"); if(c)toggle(c);
+  });
+  el("lgwrap").addEventListener("keydown",e=>{
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    const c=e.target.closest(".lgchip"); if(c){e.preventDefault();toggle(c);}
+  });
 }
 
 function drawRedevMap(){
