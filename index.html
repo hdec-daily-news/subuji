@@ -201,6 +201,9 @@ function drawMap(force){
   const tr=order.map(g=>{
     const pts=D.complexes.filter(c=>c.g===g.g&&c.lat);
     return {type:"scattermapbox",mode:"markers",name:g.label,
+      // 그리는 순서는 하급지->최상급지(겹침 방지)지만, 범례는 최상급지부터
+      // 보여야 읽기 좋다. legendrank 로 둘을 분리한다.
+      legendrank:g.g,
       lat:pts.map(p=>p.lat),lon:pts.map(p=>p.lon),
       customdata:pts.map(p=>[p.nm,p.gu+" "+p.dong,eok(p.p84),
         p.c2==null?"-":(p.c2>0?"+":"")+p.c2.toFixed(0)+"%"]),
