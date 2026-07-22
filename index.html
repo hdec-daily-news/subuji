@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>서울 부동산 리서치</title>
-<meta name="description" content="국토부 실거래가 기반 서울 아파트 급지·시세·정비사업 리서치">
+<title>수도권 부동산 지도</title>
+<meta name="description" content="국토부 실거래가 기반 수도권 아파트 급지·시세·정비사업 지도">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
 :root{
@@ -96,7 +96,7 @@ blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color
 <body>
 <div class="topbar">
   <header>
-    <h1>🏙️ 서울 부동산 리서치</h1>
+    <h1>🏙️ 수도권 부동산 지도</h1>
     <div class="sub" id="meta">불러오는 중…</div>
   </header>
   <nav id="nav"></nav>
@@ -106,6 +106,7 @@ blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color
   <section id="s-grade"></section>
   <section id="s-flag"></section>
   <section id="s-search"></section>
+  <section id="s-cmp"></section>
   <section id="s-redev"></section>
   <section id="s-report"></section>
   <section id="s-calc"></section>
@@ -113,7 +114,7 @@ blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color
 
 <script>
 const TABS=[["s-map","🗺️ 지도"],["s-grade","🏆 급지"],["s-flag","👑 대장단지"],
-            ["s-search","🔎 단지검색"],["s-redev","🏗️ 정비사업"],
+            ["s-search","🔎 단지검색"],["s-cmp","⚖️ 단지비교"],["s-redev","🏗️ 정비사업"],
             ["s-report","📰 리포트"],["s-calc","💰 자금"]];
 let D=null;
 const eok=v=>v==null?"-":(v/10000).toFixed(1)+"억";
@@ -395,6 +396,104 @@ function renderSearch(){
   run();
 }
 
+// ---------------------------------------------------------------------------
+// 단지 비교 (최대 5개)
+// ---------------------------------------------------------------------------
+const CMP_MAX=5;
+let CMP=[];                       // 선택한 단지 키 목록
+const ckey=c=>`${c.gu}|${c.dong}|${c.nm}`;
+
+function renderCmp(){
+  el("s-cmp").innerHTML=`<div class="card">
+    <h2>⚖️ 단지 비교</h2>
+    <div class="muted">최대 ${CMP_MAX}개 단지를 골라 84환산가·상승률·세대수·준공을 나란히 비교합니다.</div>
+    <label>단지 검색 후 추가</label>
+    <input id="cq" placeholder="단지명 입력 (예: 은마, 래미안, 자이)" autocomplete="off">
+    <div id="cnotice" style="display:none;margin-top:8px;padding:8px 10px;border-radius:8px;
+      background:rgba(220,38,38,.1);color:#dc2626;font-size:13px;font-weight:600"></div>
+    <div id="csug"></div>
+    <div id="cpick" class="lgwrap" style="margin-top:10px"></div>
+    </div>
+    <div id="cout"></div>`;
+  el("cq").oninput=suggest;
+  el("csug").onclick=e=>{
+    const b=e.target.closest("[data-k]"); if(!b)return;
+    addCmp(b.dataset.k);
+  };
+  el("cpick").onclick=e=>{
+    const b=e.target.closest("[data-del]"); if(!b)return;
+    CMP=CMP.filter(k=>k!==b.dataset.del); cmpNotice(""); drawCmp();
+  };
+  drawCmp();
+}
+
+function suggest(){
+  const q=el("cq").value.trim();
+  if(!q){el("csug").innerHTML="";return;}
+  const hits=D.complexes.filter(c=>c.nm.includes(q)).sort((a,b)=>b.p84-a.p84).slice(0,12);
+  el("csug").innerHTML=hits.length
+    ? `<div class="scroll" style="margin-top:8px"><table>${hits.map(c=>
+        `<tr data-k="${esc(ckey(c))}" style="cursor:pointer">
+         <td>${esc(c.gu)}</td><td class="nm"><b>${esc(c.nm)}</b></td>
+         <td><span class="tag" style="background:${gcolor(c.g)}">${glabel(c.g)}</span></td>
+         <td>${eok(c.p84)}</td><td class="muted">+ 추가</td></tr>`).join("")}</table></div>`
+    : `<div class="muted" style="margin-top:8px">검색 결과 없음</div>`;
+}
+
+function cmpNotice(msg){
+  const n=el("cnotice"); if(!n)return;
+  n.textContent=msg||"";
+  n.style.display=msg?"block":"none";
+}
+function addCmp(k){
+  if(CMP.includes(k)){ cmpNotice("이미 선택한 단지입니다."); return; }
+  // alert() 는 모달이라 화면을 멈춘다. 인라인 안내로 처리한다.
+  if(CMP.length>=CMP_MAX){ cmpNotice(`최대 ${CMP_MAX}개까지 비교할 수 있습니다. 하나를 제거한 뒤 추가하세요.`); return; }
+  CMP.push(k); el("cq").value=""; el("csug").innerHTML=""; cmpNotice(""); drawCmp();
+}
+
+function drawCmp(){
+  const picked=CMP.map(k=>D.complexes.find(c=>ckey(c)===k)).filter(Boolean);
+  el("cpick").innerHTML=picked.length
+    ? picked.map(c=>`<span class="lgchip" data-del="${esc(ckey(c))}" style="--gc:${gcolor(c.g)}">
+        <span class="lgtxt"><b>${esc(c.nm)}</b><span>${esc(c.gu)} · 클릭하면 제거</span></span></span>`).join("")
+    : `<div class="muted">아직 선택한 단지가 없습니다.</div>`;
+
+  if(!picked.length){ el("cout").innerHTML=""; return; }
+
+  const rows=[
+    ["급지", c=>`<span class="tag" style="background:${gcolor(c.g)}">${glabel(c.g)}</span>`],
+    ["84환산가", c=>`<b>${eok(c.p84)}</b>`],
+    ["상승률(2년)", c=>pct(c.c2)],
+    ["2년 전", c=>c.p2?eok(c.p2):`<span class="muted">-</span>`],
+    ["세대수", c=>c.hh?c.hh.toLocaleString():"-"],
+    ["준공", c=>c.by??"-"],
+    ["최근 거래", c=>c.n],
+    ["규제", c=>(D.regs||{})[c.gu]
+        ? `<span style="color:#dc2626;font-size:11px">${esc(D.regs[c.gu])}</span>`
+        : `<span class="muted">비규제</span>`],
+  ];
+  el("cout").innerHTML=`<div class="card scroll"><table>
+    <tr><th>항목</th>${picked.map(c=>
+      `<th>${esc(c.nm)}<br><span class="muted" style="font-weight:400">${esc(c.gu)} ${esc(c.dong)}</span></th>`).join("")}</tr>
+    ${rows.map(([label,fn])=>
+      `<tr><td class="muted">${label}</td>${picked.map(c=>`<td>${fn(c)}</td>`).join("")}</tr>`).join("")}
+    </table></div>
+    <div class="card"><div id="cchart" style="height:340px"></div></div>`;
+
+  // 84환산가 + 2년 전 가격을 나란히 막대로
+  Plotly.newPlot("cchart",[
+    {type:"bar",name:"2년 전",x:picked.map(c=>c.nm),
+     y:picked.map(c=>c.p2?c.p2/10000:null),marker:{color:"#9aa1ab"}},
+    {type:"bar",name:"현재(84환산)",x:picked.map(c=>c.nm),
+     y:picked.map(c=>c.p84/10000),marker:{color:picked.map(c=>gcolor(c.g))}},
+  ],{barmode:"group",margin:{l:46,r:10,t:30,b:60},
+     yaxis:{title:"억"},legend:{orientation:"h",y:1.12},
+     paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",
+     font:{color:getComputedStyle(document.body).color}},
+    {displayModeBar:false,responsive:true});
+}
+
 function renderReport(){
   el("s-report").innerHTML=`<div class="card"><h2>📰 일일 변동 리포트</h2>
     <div class="muted">매일 아침 자동 생성 · 새 거래 / 급지 변동 / 84환산가 변동</div></div>
@@ -462,7 +561,7 @@ fetch("data.json").then(r=>r.json()).then(d=>{
   mt.title=`국토부 실거래가 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · `
     +`수집기간 ${d.meta.period} · 갱신 ${d.meta.generated}`;
   nav(); renderGrade(); renderMap(); renderFlag(); renderSearch();
-  renderRedev(); renderReport(); renderCalc();
+  renderCmp(); renderRedev(); renderReport(); renderCalc();
   drawMap();   // 지도가 첫 탭이므로 로드 직후 바로 그린다
 }).catch(e=>{el("meta").textContent="데이터 로드 실패: "+e});
 </script>
