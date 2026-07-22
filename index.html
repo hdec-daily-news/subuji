@@ -148,14 +148,38 @@ function renderGrade(){
       <th>84환산</th><th class="hide-sm">세대</th><th class="hide-sm">준공</th></tr>
       ${rows}</table></div><div class="muted">상위 50개만 표시</div></details>`;
   }).join("");
+  // 급지별 분위수를 직접 계산해서 한글 표로 보여준다.
+  // (Plotly 박스플롯 기본 툴팁은 q1/q3 같은 영문 약어라 알아보기 어렵다)
+  const quart=(arr,p)=>{const v=arr.slice().sort((a,b)=>a-b);
+    const i=(v.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i);
+    return v[lo]+(v[hi]-v[lo])*(i-lo);};
+  const statRows=D.grades.map(g=>{
+    const v=D.complexes.filter(c=>c.g===g.g).map(c=>c.p84/10000);
+    if(!v.length)return "";
+    const f=x=>x.toFixed(1)+"억";
+    return `<tr><td><b style="color:${g.color}">${g.label}</b></td>
+      <td>${f(Math.min(...v))}</td><td>${f(quart(v,.25))}</td>
+      <td><b>${f(quart(v,.5))}</b></td><td>${f(quart(v,.75))}</td>
+      <td>${f(Math.max(...v))}</td></tr>`;
+  }).join("");
+
   el("s-grade").innerHTML=`<div class="card"><h2>급지 현황</h2>
     <div class="muted">최근 6개월 매매 실거래의 평단가 중앙값을 전용 84(25.41평)로 환산해 자동 산출</div></div>
     <div class="grid">${cards}</div>
-    <div class="card" style="margin-top:12px"><div id="gchart" class="chart"></div></div>
+    <div class="card" style="margin-top:12px"><div id="gchart" class="chart"></div>
+      <div class="scroll"><table>
+        <tr><th>급지</th><th>최저</th><th>하위25%</th><th>중앙값</th><th>상위25%</th><th>최고</th></tr>
+        ${statRows}</table></div>
+      <div class="muted" style="margin-top:8px">
+        상자의 왼쪽 끝이 <b>하위25%</b>, 오른쪽 끝이 <b>상위25%</b>입니다.
+        즉 <b>상자 안에 그 급지 단지의 가운데 절반</b>이 들어있습니다.</div>
+    </div>
     <div class="card">${lists}</div>`;
+
   const tr=D.grades.map(g=>({
     type:"box", x:D.complexes.filter(c=>c.g===g.g).map(c=>c.p84/10000),
-    name:g.label, marker:{color:g.color}, orientation:"h", boxpoints:false}));
+    name:g.label, marker:{color:g.color}, orientation:"h", boxpoints:false,
+    hoverinfo:"skip"}));   // 영문 q1/q3 툴팁 대신 위 한글 표를 쓴다
   Plotly.newPlot("gchart",tr,{margin:{l:70,r:10,t:10,b:36},showlegend:false,
     xaxis:{title:"전용 84 환산가(억)"},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",
     font:{color:getComputedStyle(document.body).color}},{displayModeBar:false,responsive:true});
