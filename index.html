@@ -299,12 +299,15 @@ function renderSearch(){
     el("sres").innerHTML=`<div class="muted" style="margin-bottom:6px">${r.length}개 표시 (최대 200)</div>
       <table><tr><th>구</th><th class="hide-sm">동</th><th>단지</th><th>급지</th><th>84환산</th>
       <th>상승률<span class="hide-sm">(2년)</span></th><th class="hide-sm">2년전</th>
+      <th class="hide-sm">규제</th>
       <th class="hide-sm">세대</th><th class="hide-sm">준공</th><th class="hide-sm">거래</th></tr>
       ${r.map(c=>`<tr><td>${esc(c.gu)}</td><td class="hide-sm">${esc(c.dong)}</td>
       <td class="nm"><b>${esc(c.nm)}</b></td>
       <td><span class="tag" style="background:${gcolor(c.g)}">${glabel(c.g)}</span></td>
       <td>${eok(c.p84)}</td><td>${pct(c.c2)}</td>
       <td class="muted hide-sm">${c.p2?eok(c.p2):"-"}</td>
+      <td class="hide-sm" style="font-size:11px">${(D.regs||{})[c.gu]
+        ? `<span style="color:#dc2626">${esc(D.regs[c.gu])}</span>` : `<span class="muted">-</span>`}</td>
       <td class="hide-sm">${c.hh??"-"}</td><td class="hide-sm">${c.by??"-"}</td>
       <td class="hide-sm">${c.n}</td></tr>`).join("")}</table>`;
   };
@@ -325,7 +328,10 @@ function renderCalc(){
     <div class="row"><div><label>보유 현금(만원)</label><input id="cash" type="number" placeholder="예: 50000" step="1000"></div>
     <div><label>연소득(만원)</label><input id="inc" type="number" placeholder="예: 8000" step="500"></div></div>
     <div class="row"><div><label>매매가(만원)</label><input id="price" type="number" placeholder="예: 150000" step="1000"></div>
-    <div><label>지역</label><select id="reg"><option>비규제지역 (LTV 70%)</option><option>규제지역 (LTV 50%)</option></select></div></div>
+    <div><label>지역</label><select id="reg">
+      <option value="">비규제지역 (LTV 70%)</option>
+      ${Object.keys(D.regs||{}).sort().map(g=>`<option value="${g}">${g} · 투기과열 (50%)</option>`).join("")}
+    </select></div></div>
     <div class="row"><div><label>금리(%)</label><input id="rate" type="number" placeholder="미입력시 4.5" step="0.1"></div>
     <div><label>기간(년)</label><input id="yrs" type="number" placeholder="미입력시 30" step="5"></div></div>
     <div class="row"><div><label>시나리오</label><select id="mode"><option>실거주 매수</option><option>갭투자(전세 레버리지)</option></select></div>
@@ -334,7 +340,7 @@ function renderCalc(){
   const num=id=>{const v=el(id).value.trim();return v===""?null:+v;};
   const run=()=>{
     const cash=num("cash"), inc=num("inc"), price=num("price"), jeonse=num("jeonse"),
-      ltv=el("reg").value.includes("규제지역 (LTV 50")?0.5:0.7,
+      ltv=el("reg").value?0.5:0.7,   // 규제지역(투기과열) 선택 시 50%
       rate=(num("rate")??4.5)/100, yrs=num("yrs")??30, mode=el("mode").value;
 
     // 필요한 값이 비어 있으면 계산하지 않는다 (0으로 계산해 엉뚱한 결과를 보이지 않도록)
