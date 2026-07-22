@@ -210,9 +210,6 @@ function renderRedev(){
     <div class="t"><a href="${esc(n.l)}" target="_blank" rel="noopener">${esc(n.t)}</a></div>
     <div class="m">[${esc(n.st)}] ${esc(n.d)} ${n.gu?"· 📍"+esc(n.gu)+" "+esc(n.dong):""} ${n.b?"· 🏢"+esc(n.b):""}</div>
     </div>`).join("");
-  const bitems=D.blogs.slice(0,40).map(n=>`<div class="item">
-    <div class="t"><a href="${esc(n.l)}" target="_blank" rel="noopener">${esc(n.t)}</a></div>
-    <div class="m">${esc(n.d)} · ${esc(n.s)} ${n.gu?"· 📍"+esc(n.gu):""}</div></div>`).join("");
   el("s-redev").innerHTML=`<div class="card"><h2>재개발·재건축 정비사업</h2>
     <div class="muted">기사 기반 자동 수집 · 시공사 선정 ${cnt("시공사 선정")} · 입찰 ${cnt("입찰")} · 현장설명회 ${cnt("현장설명회")}</div></div>
     <div class="card"><div id="rmap" style="height:56vh;min-height:340px"></div>
@@ -220,8 +217,7 @@ function renderRedev(){
     <div class="card"><h3>사업지 현황판</h3><div class="scroll"><table>
       <tr><th>단계</th><th>사업지</th><th>구</th><th>건설사</th>
       <th class="hide-sm">기사</th><th class="hide-sm">최근</th></tr>${prows}</table></div></div>
-    <div class="card"><h3>최신 기사</h3>${nitems}</div>
-    <div class="card"><h3>📝 블로그 인사이트</h3>${bitems}</div>`;
+    <div class="card"><h3>최신 기사</h3>${nitems}</div>`;
 }
 
 function renderFlag(){
