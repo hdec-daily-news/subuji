@@ -235,26 +235,38 @@ function renderCalc(){
   const REG=["강남구","서초구","송파구","용산구"];
   el("s-calc").innerHTML=`<div class="card"><h2>💰 자금 시뮬레이터</h2>
     <div class="muted">LTV·DSR 기준 대출한도와 진입 가능 여부 (개략 추정)</div>
-    <div class="row"><div><label>보유 현금(만원)</label><input id="cash" type="number" value="50000" step="1000"></div>
-    <div><label>연소득(만원)</label><input id="inc" type="number" value="8000" step="500"></div></div>
-    <div class="row"><div><label>매매가(만원)</label><input id="price" type="number" value="150000" step="1000"></div>
+    <div class="row"><div><label>보유 현금(만원)</label><input id="cash" type="number" placeholder="예: 50000" step="1000"></div>
+    <div><label>연소득(만원)</label><input id="inc" type="number" placeholder="예: 8000" step="500"></div></div>
+    <div class="row"><div><label>매매가(만원)</label><input id="price" type="number" placeholder="예: 150000" step="1000"></div>
     <div><label>지역</label><select id="reg"><option>비규제지역 (LTV 70%)</option><option>규제지역 (LTV 50%)</option></select></div></div>
-    <div class="row"><div><label>금리(%)</label><input id="rate" type="number" value="4.5" step="0.1"></div>
-    <div><label>기간(년)</label><input id="yrs" type="number" value="30" step="5"></div></div>
+    <div class="row"><div><label>금리(%)</label><input id="rate" type="number" placeholder="미입력시 4.5" step="0.1"></div>
+    <div><label>기간(년)</label><input id="yrs" type="number" placeholder="미입력시 30" step="5"></div></div>
     <div class="row"><div><label>시나리오</label><select id="mode"><option>실거주 매수</option><option>갭투자(전세 레버리지)</option></select></div>
-    <div><label>전세가(만원, 갭투자시)</label><input id="jeonse" type="number" value="75000" step="1000"></div></div>
+    <div><label>전세가(만원, 갭투자시)</label><input id="jeonse" type="number" placeholder="예: 75000" step="1000"></div></div>
     </div><div class="card" id="cres"></div>`;
+  const num=id=>{const v=el(id).value.trim();return v===""?null:+v;};
   const run=()=>{
-    const cash=+el("cash").value, inc=+el("inc").value, price=+el("price").value,
+    const cash=num("cash"), inc=num("inc"), price=num("price"), jeonse=num("jeonse"),
       ltv=el("reg").value.includes("규제지역 (LTV 50")?0.5:0.7,
-      rate=+el("rate").value/100, yrs=+el("yrs").value, mode=el("mode").value;
+      rate=(num("rate")??4.5)/100, yrs=num("yrs")??30, mode=el("mode").value;
+
+    // 필요한 값이 비어 있으면 계산하지 않는다 (0으로 계산해 엉뚱한 결과를 보이지 않도록)
+    const need_fields = mode==="실거주 매수"
+      ? [["보유 현금",cash],["연소득",inc],["매매가",price]]
+      : [["보유 현금",cash],["매매가",price],["전세가",jeonse]];
+    const missing = need_fields.filter(([,v])=>v===null||isNaN(v)).map(([k])=>k);
+    if(missing.length){
+      el("cres").innerHTML=`<div class="muted">👆 ${missing.join(", ")} 을(를) 입력하면 계산됩니다.</div>`;
+      return;
+    }
+
     const tax=price<=60000?price*0.011:price<=90000?price*0.022:price*0.033;
     let need,loan=0,dsrL=0,ltvL=0;
     if(mode==="실거주 매수"){
       const mr=rate/12,n=yrs*12,f=mr===0?1/n:mr/(1-Math.pow(1+mr,-n));
       dsrL=inc*0.40/(f*12); ltvL=price*ltv; loan=Math.min(dsrL,ltvL);
       need=price+tax-loan;
-    }else{ need=price-(+el("jeonse").value)+tax; }
+    }else{ need=price-jeonse+tax; }
     const short=need-cash, ok=short<=0;
     el("cres").innerHTML=`
       ${mode==="실거주 매수"?`<div>대출 가능 <span class="big">${eok(loan)}</span>
