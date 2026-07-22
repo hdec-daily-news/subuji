@@ -32,10 +32,6 @@ nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 10px;background:var(--
 nav button{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--mut);
   padding:7px 13px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
 nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
-/* 지도 표시 단위 전환 버튼 */
-.mbtn{border:1px solid var(--line);background:transparent;color:var(--mut);
-  padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.mbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
 main{padding:14px 12px 60px;max-width:1100px;margin:0 auto}
 section{display:none} section.on{display:block}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
@@ -188,81 +184,34 @@ function renderGrade(){
     xaxis:{title:"전용 84 환산가(억)"},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",
     font:{color:getComputedStyle(document.body).color}},{displayModeBar:false,responsive:true});
 }
+// 급지별 마커 크기·투명도. 상급지일수록 크고 진하게 해서
+// 지도 위에서 '상급지 벨트'가 먼저 눈에 들어오도록 한다.
+const MSIZE={1:13,2:10.5,3:8.5,4:7,5:6,6:5};
+const MOPAC={1:.95,2:.88,3:.78,4:.62,5:.5,6:.38};
 
-// 중앙값(정렬 후 가운데) — 집계 마커의 대표 가격으로 쓴다
-function med(a){const v=a.slice().sort((x,y)=>x-y);const n=v.length;
-  return n?(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2):0;}
-
-// 지역 단위로 묶어 대표 좌표·중앙 가격·단지수를 만든다.
-// 개별 단지 4,800개를 그대로 찍으면 화면이 뭉개져서, 기본은 집계로 보여준다.
-function aggregate(level){
-  const key=c=>level==="gu"?c.gu:c.gu+" "+c.dong;
-  const bag={};
-  D.complexes.filter(c=>c.lat).forEach(c=>{
-    (bag[key(c)]=bag[key(c)]||[]).push(c);
-  });
-  return Object.entries(bag).map(([name,arr])=>{
-    const ps=arr.map(c=>c.p84);
-    const p=med(ps);
-    const rises=arr.map(c=>c.c2).filter(v=>v!=null);
-    const top=arr.reduce((b,c)=>c.p84>b.p84?c:b,arr[0]);
-    return {name, n:arr.length, p84:p, g:gradeOf(p),
-      hi:Math.max(...ps), hiNm:top.nm,
-      lat:arr.reduce((s,c)=>s+c.lat,0)/arr.length,
-      lon:arr.reduce((s,c)=>s+c.lon,0)/arr.length,
-      c2:rises.length?med(rises):null};
-  }).sort((a,b)=>b.n-a.n);
-}
-// 집계 가격 -> 급지. 하한선(floor)은 파이썬 쪽 기준을 그대로 받아 쓴다.
-const gradeOf=p=>{
-  const t=D.grades.slice().sort((a,b)=>b.floor-a.floor).find(g=>p>=g.floor);
-  return t?t.g:D.grades[D.grades.length-1].g;
-};
-
-let MAPMODE="gu";
 function drawMap(force){
   const m=el("mapdiv");
   if(!m)return;
   if(m.dataset.done && !force)return;
 
-  let tr;
-  if(MAPMODE==="apt"||MAPMODE==="flag"){
-    const src = MAPMODE==="flag"
-      ? D.flagships.filter(c=>c.lat)
-      : D.complexes.filter(c=>c.lat);
-    tr=D.grades.map(g=>{
-      const pts=src.filter(c=>c.g===g.g);
-      return {type:"scattermapbox",mode:"markers",name:g.label,
-        lat:pts.map(p=>p.lat),lon:pts.map(p=>p.lon),
-        text:pts.map(p=>`<b>${p.nm}</b><br>${p.gu} ${p.dong}<br>${eok(p.p84)}`),
-        hoverinfo:"text",
-        marker:{size:MAPMODE==="flag"?15:6,color:g.color,
-                opacity:MAPMODE==="flag"?.95:.6}};
-    });
-  }else{
-    const agg=aggregate(MAPMODE);
-    const maxN=Math.max(...agg.map(a=>a.n));
-    tr=D.grades.map(g=>{
-      const pts=agg.filter(a=>a.g===g.g);
-      return {type:"scattermapbox",mode:MAPMODE==="gu"?"markers+text":"markers",
-        name:g.label,
-        lat:pts.map(p=>p.lat),lon:pts.map(p=>p.lon),
-        text:pts.map(p=>p.name.replace(/시(.+구)$/,"$1")),
-        textposition:"top center",
-        textfont:{size:10,color:g.color},
-        customdata:pts.map(p=>[p.name,p.n,eok(p.p84),
-          p.c2==null?"-":(p.c2>0?"+":"")+p.c2.toFixed(0)+"%", eok(p.hi), p.hiNm]),
-        hovertemplate:"<b>%{customdata[0]}</b> · 단지 %{customdata[1]}개<br>"+
-                      "단지 중앙값 %{customdata[2]} (2년 %{customdata[3]})<br>"+
-                      "최고 %{customdata[4]} · %{customdata[5]}<extra></extra>",
-        marker:{color:g.color,opacity:.72,
-          size:pts.map(p=>Math.max(12,Math.min(46,10+42*Math.sqrt(p.n/maxN))))}};
-    });
-  }
+  // ⚠️ 그리는 순서가 중요하다. 앞 trace 가 먼저 깔리고 뒤 trace 가 위에 얹힌다.
+  // 급지 순(1→6)으로 그리면 최상급지가 하급지 점들에 덮여 벨트가 안 보인다.
+  // 그래서 하급지부터 그리고 최상급지를 맨 위에 올린다.
+  const order=D.grades.slice().sort((a,b)=>b.g-a.g);
+  const tr=order.map(g=>{
+    const pts=D.complexes.filter(c=>c.g===g.g&&c.lat);
+    return {type:"scattermapbox",mode:"markers",name:g.label,
+      lat:pts.map(p=>p.lat),lon:pts.map(p=>p.lon),
+      customdata:pts.map(p=>[p.nm,p.gu+" "+p.dong,eok(p.p84),
+        p.c2==null?"-":(p.c2>0?"+":"")+p.c2.toFixed(0)+"%"]),
+      hovertemplate:"<b>%{customdata[0]}</b><br>%{customdata[1]}<br>"+
+                    "84환산 %{customdata[2]} · 2년 %{customdata[3]}<extra></extra>",
+      marker:{size:MSIZE[g.g]||6,color:g.color,opacity:MOPAC[g.g]||.5}};
+  });
 
   Plotly.newPlot("mapdiv",tr,{
-    // carto-positron: 밝고 단순한 배경지도. open-street-map 은 도로·상호가
-    // 너무 많아 데이터 점과 뒤섞였다.
+    // carto-positron: 밝고 단순한 배경. open-street-map 은 도로·상호가 빽빽해
+    // 데이터 점과 뒤섞여 지도가 복잡해 보였다.
     mapbox:{style:"carto-positron",center:SEOUL,zoom:seoulZoom(m)},
     margin:MAPMARGIN,legend:MAPLEGEND,
     paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
@@ -271,33 +220,24 @@ function drawMap(force){
 
 function renderMap(){
   const withXY=D.complexes.filter(c=>c.lat).length;
+  const chips=D.grades.map(g=>{
+    const n=D.complexes.filter(c=>c.g===g.g&&c.lat).length;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px">
+      <span style="width:${Math.round(MSIZE[g.g])}px;height:${Math.round(MSIZE[g.g])}px;
+        border-radius:50%;background:${g.color};opacity:${MOPAC[g.g]};display:inline-block"></span>
+      <b style="color:${g.color}">${g.label}</b>
+      <span class="muted">${g.band} · ${n.toLocaleString()}</span></span>`;
+  }).join("");
   el("s-map").innerHTML=`<div class="card">
-    <h2>지도</h2>
-    <div class="muted">급지 색상 · 원 크기 = 단지 수 · 좌표 확보 ${withXY.toLocaleString()}개 단지</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px" id="mapmode">
-      <button data-m="gu"   class="mbtn on">구별</button>
-      <button data-m="dong" class="mbtn">동별</button>
-      <button data-m="apt"  class="mbtn">단지별</button>
-      <button data-m="flag" class="mbtn">대장단지</button>
-    </div></div>
-    <div class="card" style="padding:8px"><div id="mapdiv" style="height:66vh;min-height:400px"></div></div>
-    <div class="card"><div class="muted" id="maphint"></div></div>`;
-  el("mapmode").onclick=e=>{
-    const b=e.target.closest("button"); if(!b)return;
-    document.querySelectorAll("#mapmode .mbtn").forEach(x=>x.classList.remove("on"));
-    b.classList.add("on"); MAPMODE=b.dataset.m; drawMap(true); setHint();
-  };
-  setHint();
-}
-function setHint(){
-  const h={gu:"구·시 단위 집계입니다. 원이 클수록 단지가 많고, 색은 그 지역 "+
-      "'단지 중앙값'의 급지입니다. ⚠️ 중앙값은 소형·구축까지 모두 포함하므로 "+
-      "그 지역 대표 시세가 아닙니다(예: 서초구는 방배·양재의 소형 구축이 많아 중앙값이 낮음). "+
-      "마커에 마우스를 올리면 최고가 단지도 함께 나옵니다.",
-    dong:"동 단위 집계입니다. 같은 구 안에서도 동별 격차를 볼 수 있습니다.",
-    apt:"개별 단지를 모두 표시합니다. 점이 많아 겹칠 수 있으니 확대해서 보세요.",
-    flag:"구·시별 대장단지만 표시합니다."}[MAPMODE];
-  const el2=el("maphint"); if(el2)el2.textContent=h;
+    <h2>급지 지도</h2>
+    <div class="muted">단지 ${withXY.toLocaleString()}개 · 상급지일수록 <b>크고 진하게</b> 표시</div>
+    <div style="margin-top:10px;line-height:2">${chips}</div>
+    </div>
+    <div class="card" style="padding:8px"><div id="mapdiv" style="height:72vh;min-height:440px"></div></div>
+    <div class="card"><div class="muted">
+      💡 <b>범례를 클릭하면 그 급지만 켜고 끌 수 있습니다.</b>
+      최상급지만 켜면 한강변·강남 벨트가, 중급지만 켜면 외곽 분포가 한눈에 들어옵니다.
+      휠·핀치로 확대하면 개별 단지까지 볼 수 있습니다.</div></div>`;
 }
 
 function drawRedevMap(){
