@@ -10,8 +10,8 @@
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 <style>
 :root{
-  --bg:#f6f7f9; --card:#fff; --tx:#1b1d21; --mut:#6b7280; --line:#e5e7eb;
-  --accent:#1f6feb;
+  --bg:#eef1f5; --card:#fff; --tx:#191c20; --mut:#697079; --line:#e6e9ee;
+  --accent:#2563eb;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#0f1115;--card:#171a21;--tx:#e8eaed;--mut:#9aa1ab;--line:#272b33;--accent:#4c8dff}
@@ -26,12 +26,24 @@ body{margin:0;background:var(--bg);color:var(--tx);
    예전엔 nav 를 top:60px 로 고정했는데, 헤더 높이가 화면폭에 따라 달라져
    탭바가 어긋나거나 본문과 겹쳤다. */
 .topbar{position:sticky;top:0;z-index:30;background:var(--card);
-  border-bottom:1px solid var(--line)}
-header{padding:10px 16px 8px}
-h1{margin:0;font-size:17px;font-weight:700}
-/* 좁은 화면에서 3줄로 줄바꿈되어 sticky 상단바가 화면을 잡아먹던 문제 방지 */
-.sub{color:var(--mut);font-size:11.5px;margin-top:2px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  border-bottom:1px solid var(--line);box-shadow:0 2px 12px rgba(0,0,0,.04)}
+header{padding:11px 16px 9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .logo{width:31px;height:31px;border-radius:9px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em;
+  display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+h1 .tag{font-size:12.5px;font-weight:500;color:var(--mut);letter-spacing:0}
+.stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:5px 10px;font-size:12px;color:var(--mut);white-space:nowrap}
+.stat b{color:var(--tx);font-weight:700}
+@media(max-width:640px){
+  header{padding:9px 14px 7px;flex-wrap:wrap;gap:7px}
+  h1{font-size:17px} h1 .tag{display:none}
+  .stats{width:100%;justify-content:flex-start;gap:5px}
+  .stat{padding:4px 8px;font-size:11px}
+}
 nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 10px;background:var(--card);
   -webkit-overflow-scrolling:touch}
 nav button{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--mut);
@@ -49,7 +61,8 @@ nav button,.card,.gcard,.lgchip,.klgrow,.kzoom button,.mbtn{
 .gcard:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
 .item:hover{background:var(--bg)}
 button{font-family:inherit}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;
+  margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.03)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .gcard{border-left:5px solid;border-radius:10px;background:var(--card);padding:10px 12px;
   border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -148,8 +161,13 @@ blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color
 <body>
 <div class="topbar">
   <header>
-    <h1>🏙️ 수도권 부동산 지도</h1>
-    <div class="sub" id="meta">불러오는 중…</div>
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+        stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 21s7-6.3 7-11a7 7 0 0 0-14 0c0 4.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.3"/></svg></span>
+      <h1>수부지<span class="tag">수도권 부동산 지도</span></h1>
+    </div>
+    <div class="stats" id="meta"></div>
   </header>
   <nav id="nav"></nav>
 </div>
@@ -657,7 +675,11 @@ function renderCalc(){
 fetch("data.json").then(r=>r.json()).then(d=>{
   D=d;
   const mt=el("meta");
-  mt.textContent=`실거래 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · 갱신 ${d.meta.generated}`;
+  const short=n=>n>=10000?(n/10000).toFixed(n>=100000?0:1).replace(/\.0$/,"")+"만":n.toLocaleString();
+  mt.innerHTML=
+    `<span class="stat">실거래 <b>${short(d.meta.tx)}</b></span>`+
+    `<span class="stat">단지 <b>${d.meta.complexes.toLocaleString()}</b></span>`+
+    `<span class="stat">갱신 <b>${(d.meta.generated||"").slice(0,10)}</b></span>`;
   mt.title=`국토부 실거래가 ${d.meta.tx.toLocaleString()}건 · 단지 ${d.meta.complexes.toLocaleString()}개 · `
     +`수집기간 ${d.meta.period} · 갱신 ${d.meta.generated}`;
   nav(); renderGrade(); renderMap(); renderFlag(); renderSearch();
