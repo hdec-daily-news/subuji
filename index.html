@@ -6,6 +6,8 @@
 <title>수도권 부동산 지도</title>
 <meta name="description" content="국토부 실거래가 기반 수도권 아파트 급지·시세·정비사업 지도">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 <style>
 :root{
   --bg:#f6f7f9; --card:#fff; --tx:#1b1d21; --mut:#6b7280; --line:#e5e7eb;
@@ -16,7 +18,10 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);
-  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+  font:15px/1.6 "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,
+  "Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  letter-spacing:-0.01em}
 /* 헤더+탭을 하나의 sticky 블록으로 묶는다.
    예전엔 nav 를 top:60px 로 고정했는데, 헤더 높이가 화면폭에 따라 달라져
    탭바가 어긋나거나 본문과 겹쳤다. */
@@ -34,6 +39,16 @@ nav button{flex:0 0 auto;border:1px solid var(--line);background:transparent;col
 nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 main{padding:14px 12px 60px;max-width:1100px;margin:0 auto}
 section{display:none} section.on{display:block}
+/* 탭 전환 시 부드럽게 등장 (지도 탭은 제외 — 큰 캔버스라 깜빡임 방지) */
+main section.on{animation:fadeUp .3s cubic-bezier(.22,.61,.36,1)}
+#s-map.on{animation:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+nav button,.card,.gcard,.lgchip,.klgrow,.kzoom button,.mbtn{
+  transition:background .16s ease,border-color .16s ease,color .16s ease,
+  box-shadow .18s ease,transform .12s ease}
+.gcard:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.item:hover{background:var(--bg)}
+button{font-family:inherit}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .gcard{border-left:5px solid;border-radius:10px;background:var(--card);padding:10px 12px;
@@ -76,6 +91,43 @@ th{color:var(--mut);font-weight:600;font-size:12px}
 .lgchip.off .lgtxt b{color:var(--mut)}
 .lgchip.off .lgtxt span{color:var(--mut)}
 @media (max-width:640px){ .lgchip{flex:1 1 132px} .lgchip .lgtxt b{font-size:14px} }
+/* ── 카카오맵 스타일 전면 지도 ── */
+.kmap{position:relative;margin:-14px -12px 0;min-height:460px;background:var(--bg);overflow:hidden}
+.kmap #mapdiv{position:absolute;inset:0}
+.kf{position:absolute;z-index:6}
+.ksearch{top:12px;left:12px;right:12px;max-width:480px;display:flex;align-items:center;gap:9px;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 4px 18px rgba(0,0,0,.16);padding:11px 14px}
+.ksearch span.ic{font-size:17px;line-height:1}
+.ksearch input{border:0;outline:0;background:transparent;flex:1;font-size:15px;color:var(--tx);padding:0}
+.ksug{position:absolute;top:60px;left:12px;right:12px;max-width:480px;z-index:7;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden auto;max-height:46vh;
+  box-shadow:0 10px 28px rgba(0,0,0,.2)}
+.ksug div{padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px;
+  display:flex;justify-content:space-between;gap:10px;align-items:center}
+.ksug div:last-child{border-bottom:0}
+.ksug div:hover{background:var(--bg)}
+.klg{left:12px;bottom:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 4px 18px rgba(0,0,0,.16);padding:7px;display:flex;flex-direction:column;gap:2px}
+.klgrow{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 7px;border-radius:8px;
+  min-width:132px}
+.klgrow:hover{background:var(--bg)}
+.klgrow .kd{border-radius:50%;flex:0 0 auto}
+.klgrow.off{opacity:.42}
+.klgrow.off .kd{background:transparent!important;border:2px solid var(--mut)}
+.klgrow b{font-size:13px}
+.klgrow .kn{color:var(--mut);font-size:11px;margin-left:auto}
+.kzoom{right:12px;bottom:16px;display:flex;flex-direction:column;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.16)}
+.kzoom button{border:0;background:transparent;width:44px;height:44px;font-size:20px;color:var(--tx);
+  cursor:pointer;padding:0;line-height:1}
+.kzoom button:hover{background:var(--bg)}
+.kzoom button+button{border-top:1px solid var(--line)}
+.ksheet{position:absolute;left:12px;right:12px;bottom:-120%;z-index:8;max-width:480px;
+  background:var(--card);border:1px solid var(--line);border-radius:16px 16px 12px 12px;
+  box-shadow:0 -8px 30px rgba(0,0,0,.22);padding:16px 16px 18px;transition:bottom .28s ease}
+.ksheet.open{bottom:16px}
+.ksheet .kx{position:absolute;top:11px;right:13px;font-size:22px;color:var(--mut);cursor:pointer;line-height:1}
 input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
   background:var(--card);color:var(--tx);font-size:14px}
 label{font-size:12px;color:var(--mut);display:block;margin:8px 0 4px}
@@ -215,77 +267,125 @@ const MSIZE={1:13,2:10.5,3:8.5,4:7,5:6,6:5};
 const MOPAC={1:.95,2:.88,3:.78,4:.62,5:.5,6:.38};
 let MAPTRACE={};   // 급지 -> trace 인덱스
 
+// 전면 지도 높이를 화면 아래까지 채운다 (카카오맵처럼).
+function sizeMap(){
+  const wrap=document.querySelector(".kmap"); if(!wrap)return;
+  const top=wrap.getBoundingClientRect().top;
+  wrap.style.height=Math.max(460, window.innerHeight-top-66)+"px";
+  const m=el("mapdiv"); if(m&&m.dataset.done)Plotly.Plots.resize(m);
+}
+window.addEventListener("resize",()=>{
+  if(el("s-map")&&el("s-map").classList.contains("on"))sizeMap();
+});
+
 function drawMap(force){
   const m=el("mapdiv");
   if(!m)return;
-  if(m.dataset.done && !force)return;
+  sizeMap();
+  if(m.dataset.done && !force){Plotly.Plots.resize(m);return;}
 
-  // ⚠️ 그리는 순서가 중요하다. 앞 trace 가 먼저 깔리고 뒤 trace 가 위에 얹힌다.
-  // 급지 순(1→6)으로 그리면 최상급지가 하급지 점들에 덮여 벨트가 안 보인다.
-  // 그래서 하급지부터 그리고 최상급지를 맨 위에 올린다.
+  // 그리는 순서: 하급지 먼저 → 최상급지를 맨 위에 (겹침 방지)
   const order=D.grades.slice().sort((a,b)=>b.g-a.g);
-  MAPTRACE={};                       // 급지 -> trace 인덱스 (칩 토글에 사용)
+  MAPTRACE={};
   order.forEach((g,i)=>{MAPTRACE[g.g]=i;});
   const tr=order.map(g=>{
     const pts=D.complexes.filter(c=>c.g===g.g&&c.lat);
-    return {type:"scattermapbox",mode:"markers",name:g.label,
-      // 그리는 순서는 하급지->최상급지(겹침 방지)지만, 범례는 최상급지부터
-      // 보여야 읽기 좋다. legendrank 로 둘을 분리한다.
-      legendrank:g.g,
+    return {type:"scattermapbox",mode:"markers",name:g.label,legendrank:g.g,
       lat:pts.map(p=>p.lat),lon:pts.map(p=>p.lon),
-      customdata:pts.map(p=>[p.nm,p.gu+" "+p.dong,eok(p.p84),
-        p.c2==null?"-":(p.c2>0?"+":"")+p.c2.toFixed(0)+"%"]),
-      hovertemplate:"<b>%{customdata[0]}</b><br>%{customdata[1]}<br>"+
-                    "84환산 %{customdata[2]} · 2년 %{customdata[3]}<extra></extra>",
+      // 클릭 시 상세시트에 쓸 정보를 통째로 실어둔다
+      customdata:pts.map(p=>[p.nm,p.gu,p.dong,eok(p.p84),
+        p.c2==null?"-":(p.c2>0?"+":"")+p.c2.toFixed(0)+"%",p.hh,p.by,p.g]),
+      hovertemplate:"<b>%{customdata[0]}</b><br>%{customdata[1]} %{customdata[2]}<br>"+
+                    "84환산 %{customdata[3]} · 2년 %{customdata[4]}<extra></extra>",
       marker:{size:MSIZE[g.g]||6,color:g.color,opacity:MOPAC[g.g]||.5}};
   });
 
   Plotly.newPlot("mapdiv",tr,{
-    // carto-positron: 밝고 단순한 배경. open-street-map 은 도로·상호가 빽빽해
-    // 데이터 점과 뒤섞여 지도가 복잡해 보였다.
     mapbox:{style:"carto-positron",center:SEOUL,zoom:seoulZoom(m)},
-    // 지도 안 범례는 숨긴다. 위쪽 칩이 범례 역할을 하고 클릭 토글도 담당한다.
     margin:{l:0,r:0,t:0,b:0},showlegend:false,
     paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
+  m.on("plotly_click",ev=>{if(ev.points&&ev.points[0])openSheet(ev.points[0].customdata);});
   m.dataset.done=1;
 }
 
-function renderMap(){
-  const withXY=D.complexes.filter(c=>c.lat).length;
-  const chips=D.grades.map(g=>{
-    const n=D.complexes.filter(c=>c.g===g.g&&c.lat).length;
-    return `<span class="lgchip" data-g="${g.g}" role="button" tabindex="0"
-      style="--gc:${g.color}">
-      <span class="dot" style="width:${Math.round(MSIZE[g.g])}px;height:${Math.round(MSIZE[g.g])}px"></span>
-      <span class="lgtxt"><b>${g.label}</b>
-        <span>${g.band} · ${n.toLocaleString()}</span></span></span>`;
-  }).join("");
-  el("s-map").innerHTML=`<div class="card">
-    <h2>급지 지도</h2>
-    <div class="muted">단지 ${withXY.toLocaleString()}개 · 상급지일수록 <b>크고 진하게</b> 표시</div>
-    <div class="maptip">💡 급지를 클릭하여 지도상에 켜고 끌 수 있습니다.<br>
-      <span class="muted">(ex. 최상급지만 켜면 한강변·강남 벨트 / 중급지만 켜면 외곽 분포가 한눈에 들어옵니다)</span>
-    </div>
-    <div class="lgwrap" id="lgwrap">${chips}</div>
-    </div>
-    <div class="card" style="padding:8px"><div id="mapdiv" style="height:72vh;min-height:440px"></div></div>`;
+// 마커/검색 결과 클릭 → 하단 상세시트
+function openSheet(cd){
+  const [nm,gu,dong,p84,c2,hh,by,g]=cd;
+  const reg=(D.regs||{})[gu];
+  const c2col=String(c2).startsWith("+")?"#dc2626":String(c2).startsWith("-")?"#2563eb":"var(--tx)";
+  el("ksheet").innerHTML=`<span class="kx" id="kxc">×</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <b style="font-size:16px">${esc(nm)}</b>
+      <span style="font-size:11px;background:${gcolor(g)};color:#fff;padding:2px 8px;border-radius:7px">${glabel(g)}</span></div>
+    <div class="muted" style="margin-bottom:12px">${esc(gu)} ${esc(dong)}${reg?` · <span style="color:#dc2626">${esc(reg)}</span>`:""}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><div class="muted" style="font-size:11px">84환산가</div><div style="font-size:18px;font-weight:700">${p84}</div></div>
+      <div><div class="muted" style="font-size:11px">상승률(2년)</div><div style="font-size:18px;font-weight:700;color:${c2col}">${c2}</div></div>
+      <div><div class="muted" style="font-size:11px">세대수</div><div style="font-size:15px">${hh?Number(hh).toLocaleString():"-"}</div></div>
+      <div><div class="muted" style="font-size:11px">준공</div><div style="font-size:15px">${by||"-"}</div></div>
+    </div>`;
+  el("ksheet").classList.add("open");
+  el("kxc").onclick=()=>el("ksheet").classList.remove("open");
+}
 
-  // 칩 = 범례. 클릭하면 해당 급지를 지도에서 켜고 끈다.
-  // (지도 안 Plotly 범례는 숨겼다 — 중복이고 지도 공간을 차지했다)
-  const toggle=chip=>{
-    const g=+chip.dataset.g;
-    const idx=MAPTRACE[g];
-    if(idx==null)return;
-    const off=chip.classList.toggle("off");
-    Plotly.restyle("mapdiv",{visible: off?"legendonly":true},[idx]);
-  };
-  el("lgwrap").addEventListener("click",e=>{
-    const c=e.target.closest(".lgchip"); if(c)toggle(c);
+function renderMap(){
+  const rows=D.grades.map(g=>{
+    const n=D.complexes.filter(c=>c.g===g.g&&c.lat).length;
+    const s=Math.round(MSIZE[g.g]);
+    return `<div class="klgrow" data-g="${g.g}">
+      <span class="kd" style="width:${s}px;height:${s}px;background:${g.color}"></span>
+      <b style="color:${g.color}">${g.label}</b><span class="kn">${n.toLocaleString()}</span></div>`;
+  }).join("");
+  el("s-map").innerHTML=`<div class="kmap">
+    <div class="kf ksearch"><span class="ic">🔍</span>
+      <input id="ksq" placeholder="단지명 검색 (예: 은마, 자이)" autocomplete="off"></div>
+    <div class="ksug" id="ksug" style="display:none"></div>
+    <div class="kf klg" id="klg">${rows}</div>
+    <div class="kf kzoom">
+      <button id="kzi" aria-label="확대">＋</button>
+      <button id="kzo" aria-label="축소">－</button>
+      <button id="kzr" aria-label="서울 전체" title="서울 전체 보기">⤢</button></div>
+    <div class="ksheet" id="ksheet"></div>
+    <div id="mapdiv"></div>
+  </div>`;
+
+  // 범례 클릭 = 해당 급지 켜기/끄기
+  el("klg").addEventListener("click",e=>{
+    const row=e.target.closest(".klgrow"); if(!row)return;
+    const idx=MAPTRACE[+row.dataset.g]; if(idx==null)return;
+    const off=row.classList.toggle("off");
+    Plotly.restyle("mapdiv",{visible:off?"legendonly":true},[idx]);
   });
-  el("lgwrap").addEventListener("keydown",e=>{
-    if(e.key!=="Enter"&&e.key!==" ")return;
-    const c=e.target.closest(".lgchip"); if(c){e.preventDefault();toggle(c);}
+
+  // 검색 → 자동완성 → 선택 시 지도 이동 + 상세시트
+  const box=el("ksug");
+  el("ksq").addEventListener("input",()=>{
+    const q=el("ksq").value.trim();
+    if(!q){box.style.display="none";return;}
+    const hits=D.complexes.filter(c=>c.lat&&c.nm.includes(q))
+      .sort((a,b)=>b.p84-a.p84).slice(0,10);
+    if(!hits.length){box.style.display="none";return;}
+    box.innerHTML=hits.map(c=>`<div data-k="${esc(ckey(c))}">
+      <span><b>${esc(c.nm)}</b> <span class="muted">${esc(c.gu)} ${esc(c.dong)}</span></span>
+      <span style="color:${gcolor(c.g)};font-weight:700">${eok(c.p84)}</span></div>`).join("");
+    box.style.display="block";
   });
+  box.addEventListener("click",e=>{
+    const d=e.target.closest("[data-k]"); if(!d)return;
+    const c=D.complexes.find(x=>ckey(x)===d.dataset.k); if(!c)return;
+    box.style.display="none"; el("ksq").value=c.nm;
+    Plotly.relayout("mapdiv",{"mapbox.center":{lat:c.lat,lon:c.lon},"mapbox.zoom":14.5});
+    openSheet([c.nm,c.gu,c.dong,eok(c.p84),
+      c.c2==null?"-":(c.c2>0?"+":"")+c.c2.toFixed(0)+"%",c.hh,c.by,c.g]);
+  });
+
+  // 확대/축소/전체
+  const curZoom=()=>{const m=el("mapdiv");
+    return (m._fullLayout&&m._fullLayout.mapbox&&m._fullLayout.mapbox.zoom)||seoulZoom(m);};
+  el("kzi").onclick=()=>Plotly.relayout("mapdiv",{"mapbox.zoom":Math.min(18,curZoom()+1)});
+  el("kzo").onclick=()=>Plotly.relayout("mapdiv",{"mapbox.zoom":Math.max(6,curZoom()-1)});
+  el("kzr").onclick=()=>{el("ksheet").classList.remove("open");
+    Plotly.relayout("mapdiv",{"mapbox.center":SEOUL,"mapbox.zoom":seoulZoom(el("mapdiv"))});};
 }
 
 function drawRedevMap(){
