@@ -6,27 +6,35 @@
 <title>수도권 부동산 지도</title>
 <meta name="description" content="국토부 실거래가 기반 수도권 아파트 급지·시세·정비사업 지도">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-<link rel="stylesheet" as="style" crossorigin
-  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Outfit:wght@400;600;800&display=swap">
 <style>
 :root{
-  --bg:#eef1f5; --card:#fff; --tx:#191c20; --mut:#697079; --line:#e6e9ee;
-  --accent:#2563eb;
+  /* 하늘색 테마 (competitors 초록 팔레트를 sky blue 로 치환) */
+  --bg:#e9f3fb; --card:#ffffff; --tx:#16262f; --mut:#5d6f79; --line:#dde9f1;
+  --accent:#1c93e0; --accent-ink:#0f5a80; --tint:#eaf4fb;
+  --shadow:rgba(20,80,120,.16); --ring:rgba(120,190,240,.30);
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#0f1115;--card:#171a21;--tx:#e8eaed;--mut:#9aa1ab;--line:#272b33;--accent:#4c8dff}
+  :root{--bg:#0e1519;--card:#161d23;--tx:#e6edf2;--mut:#93a1ab;--line:#26313a;
+    --accent:#4cb0f5;--accent-ink:#8fd0f8;--tint:#132430;
+    --shadow:rgba(0,0,0,.4);--ring:rgba(76,176,245,.28)}
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);
-  font:15px/1.6 "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,
-  "Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font:15px/1.65 "Noto Sans KR",-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  letter-spacing:-0.005em}
+/* 숫자는 Outfit(라틴 전용) → 한글은 Noto로 자동 폴백 */
+.stat b,.gcard .num,.big,.knum{font-family:"Outfit","Noto Sans KR",sans-serif;
   letter-spacing:-0.01em}
 /* 헤더+탭을 하나의 sticky 블록으로 묶는다.
    예전엔 nav 를 top:60px 로 고정했는데, 헤더 높이가 화면폭에 따라 달라져
    탭바가 어긋나거나 본문과 겹쳤다. */
 .topbar{position:sticky;top:0;z-index:30;background:var(--card);
-  border-bottom:1px solid var(--line);box-shadow:0 2px 12px rgba(0,0,0,.04)}
+  border-bottom:1px solid var(--line);box-shadow:0 4px 20px -8px var(--shadow)}
 header{padding:11px 16px 9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand .logo{width:31px;height:31px;border-radius:9px;background:var(--accent);
@@ -62,7 +70,7 @@ nav button,.card,.gcard,.lgchip,.klgrow,.kzoom button,.mbtn{
 .item:hover{background:var(--bg)}
 button{font-family:inherit}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;
-  margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.03)}
+  margin-bottom:12px;box-shadow:0 8px 30px -14px var(--shadow)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .gcard{border-left:5px solid;border-radius:10px;background:var(--card);padding:10px 12px;
   border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -337,8 +345,8 @@ function openSheet(cd){
       <span style="font-size:11px;background:${gcolor(g)};color:#fff;padding:2px 8px;border-radius:7px">${glabel(g)}</span></div>
     <div class="muted" style="margin-bottom:12px">${esc(gu)} ${esc(dong)}${reg?` · <span style="color:#dc2626">${esc(reg)}</span>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div><div class="muted" style="font-size:11px">84환산가</div><div style="font-size:18px;font-weight:700">${p84}</div></div>
-      <div><div class="muted" style="font-size:11px">상승률(2년)</div><div style="font-size:18px;font-weight:700;color:${c2col}">${c2}</div></div>
+      <div><div class="muted" style="font-size:11px">84환산가</div><div class="knum" style="font-size:19px;font-weight:800">${p84}</div></div>
+      <div><div class="muted" style="font-size:11px">상승률(2년)</div><div class="knum" style="font-size:19px;font-weight:800;color:${c2col}">${c2}</div></div>
       <div><div class="muted" style="font-size:11px">세대수</div><div style="font-size:15px">${hh?Number(hh).toLocaleString():"-"}</div></div>
       <div><div class="muted" style="font-size:11px">준공</div><div style="font-size:15px">${by||"-"}</div></div>
     </div>`;
