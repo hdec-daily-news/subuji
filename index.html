@@ -234,6 +234,9 @@ function seoulZoom(node){
 }
 // 스크롤(휠)·핀치 확대 허용
 const MAPCFG={displayModeBar:false,responsive:true,scrollZoom:true};
+// 이보다 더 축소하면 국제 배경지도가 '일본해(Sea of Japan)' 라벨을 노출한다.
+// 수도권 서비스라 이 이상 볼 필요가 없으므로 여기서 막는다.
+const MIN_ZOOM=8;
 // 범례를 지도 위에 겹치지 않게: 상단에 여백을 확보하고 그 안에 범례를 넣는다.
 // 글씨를 키운 만큼 여백(t)도 같이 늘려야 지도와 겹치지 않는다.
 const MAPMARGIN={l:0,r:0,t:48,b:0};
@@ -340,6 +343,11 @@ function drawMap(force){
     margin:{l:0,r:0,t:0,b:0},showlegend:false,
     paper_bgcolor:"rgba(0,0,0,0)"},MAPCFG);
   m.on("plotly_click",ev=>{if(ev.points&&ev.points[0])openSheet(ev.points[0].customdata);});
+  // 최소 줌보다 더 축소되면 되돌린다 (일본해 라벨 노출 방지)
+  m.on("plotly_relayout",e=>{
+    const z=e["mapbox.zoom"];
+    if(z!=null && z<MIN_ZOOM)Plotly.relayout("mapdiv",{"mapbox.zoom":MIN_ZOOM});
+  });
   m.dataset.done=1;
 }
 
@@ -418,7 +426,7 @@ function renderMap(){
   const curZoom=()=>{const m=el("mapdiv");
     return (m._fullLayout&&m._fullLayout.mapbox&&m._fullLayout.mapbox.zoom)||seoulZoom(m);};
   el("kzi").onclick=()=>Plotly.relayout("mapdiv",{"mapbox.zoom":Math.min(18,curZoom()+1)});
-  el("kzo").onclick=()=>Plotly.relayout("mapdiv",{"mapbox.zoom":Math.max(6,curZoom()-1)});
+  el("kzo").onclick=()=>Plotly.relayout("mapdiv",{"mapbox.zoom":Math.max(MIN_ZOOM,curZoom()-1)});
   el("kzr").onclick=()=>{el("ksheet").classList.remove("open");
     Plotly.relayout("mapdiv",{"mapbox.center":SEOUL,"mapbox.zoom":seoulZoom(el("mapdiv"))});};
 }
