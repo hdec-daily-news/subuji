@@ -128,19 +128,19 @@ th{color:var(--mut);font-weight:600;font-size:12px}
   display:flex;justify-content:space-between;gap:10px;align-items:center}
 .ksug div:last-child{border-bottom:0}
 .ksug div:hover{background:var(--bg)}
-/* 접이식 범례: 평소엔 작은 버튼으로 접혀 지도를 가리지 않는다 */
-.klg{left:12px;bottom:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;
-  box-shadow:0 8px 30px -14px var(--shadow);overflow:hidden}
-.klgtog{display:flex;align-items:center;gap:7px;width:100%;border:0;background:transparent;
-  cursor:pointer;padding:9px 12px;font-size:13px;font-weight:700;color:var(--tx);font-family:inherit}
-.klgtog .dots{display:flex;gap:3px}
-.klgtog .dots i{width:9px;height:9px;border-radius:50%;display:inline-block}
-.klgtog .chev{margin-left:4px;color:var(--mut);font-size:11px;transition:transform .2s}
-.klg.open .klgtog .chev{transform:rotate(180deg)}
-.klgbody{display:none;flex-direction:column;gap:2px;padding:0 7px 7px}
-.klg.open .klgbody{display:flex}
-.klgrow{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 7px;border-radius:8px;
-  min-width:132px}
+/* 범례 = 급지 토글 6개를 한 줄로. 검색바 아래에 떠 있고, 좁으면 가로 스크롤 */
+.klg{left:12px;right:12px;top:64px;display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;justify-content:flex-start}
+.klg::-webkit-scrollbar{display:none}
+.klgrow{flex:0 0 auto;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;
+  background:var(--card);border:1.5px solid var(--gc);border-radius:999px;padding:6px 10px;
+  box-shadow:0 4px 16px -10px var(--shadow);transition:opacity .15s,border-color .15s}
+.klgrow .kd{border-radius:50%;flex:0 0 auto}
+.klgrow b{font-size:12px}
+.klgrow .kn{display:none}
+.klgrow.off{opacity:.55;border-style:dashed;border-color:var(--line)}
+.klgrow.off .kd{background:transparent!important;border:2px solid var(--mut)}
+.klgrow.off b{color:var(--mut)!important}
 .klgrow:hover{background:var(--bg)}
 .klgrow .kd{border-radius:50%;flex:0 0 auto}
 .klgrow.off{opacity:.42}
@@ -365,20 +365,17 @@ function openSheet(cd){
 
 function renderMap(){
   const rows=D.grades.map(g=>{
-    const n=D.complexes.filter(c=>c.g===g.g&&c.lat).length;
-    const s=Math.round(MSIZE[g.g]);
-    return `<div class="klgrow" data-g="${g.g}">
+    const s=Math.min(11,Math.round(MSIZE[g.g]));
+    const short=g.label.replace("급지","");
+    return `<div class="klgrow" data-g="${g.g}" style="--gc:${g.color}">
       <span class="kd" style="width:${s}px;height:${s}px;background:${g.color}"></span>
-      <b style="color:${g.color}">${g.label}</b><span class="kn">${n.toLocaleString()}</span></div>`;
+      <b style="color:${g.color}">${short}</b></div>`;
   }).join("");
-  const dots=D.grades.map(g=>`<i style="background:${g.color}"></i>`).join("");
   el("s-map").innerHTML=`<div class="kmap">
     <div class="kf ksearch"><span class="ic">🔍</span>
       <input id="ksq" placeholder="단지명 검색 (예: 은마, 자이)" autocomplete="off"></div>
     <div class="ksug" id="ksug" style="display:none"></div>
-    <div class="kf klg" id="klg">
-      <button class="klgtog" id="klgtog" aria-label="급지 범례 펼치기">급지<span class="dots">${dots}</span><span class="chev">▾</span></button>
-      <div class="klgbody">${rows}</div></div>
+    <div class="kf klg" id="klg">${rows}</div>
     <div class="kf kzoom">
       <button id="kzi" aria-label="확대">＋</button>
       <button id="kzo" aria-label="축소">－</button>
@@ -387,9 +384,7 @@ function renderMap(){
     <div id="mapdiv"></div>
   </div>`;
 
-  // 범례 펼치기/접기 (평소엔 접혀 지도를 안 가림)
-  el("klgtog").onclick=()=>el("klg").classList.toggle("open");
-  // 급지 행 클릭 = 해당 급지 켜기/끄기
+  // 급지 칩 클릭 = 해당 급지 켜기/끄기
   el("klg").addEventListener("click",e=>{
     const row=e.target.closest(".klgrow"); if(!row)return;
     const idx=MAPTRACE[+row.dataset.g]; if(idx==null)return;
